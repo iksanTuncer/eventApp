@@ -32,7 +32,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
   final _queue = NotificationQueueService();
 
   String? _imageBase64; // null ise hazır asset kullanılır
-  String? _noShowImageBase64;
   DateTime? _startAt;
   DateTime? _endAt;
   String _locationMode = 'text'; // 'text' | 'map'
@@ -65,13 +64,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
     if (fromCamera == null) return;
     final b64 = await _imageService.pickAndEncode(fromCamera: fromCamera);
     if (b64 != null) setState(() => _imageBase64 = b64);
-  }
-
-  Future<void> _pickNoShowImage() async {
-    final fromCamera = await showImageSourceSheet(context);
-    if (fromCamera == null) return;
-    final b64 = await _imageService.pickAndEncode(fromCamera: fromCamera);
-    if (b64 != null) setState(() => _noShowImageBase64 = b64);
   }
 
   Future<void> _pickDateTime(bool isStart) async {
@@ -184,7 +176,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
         lat: _locationMode == 'map' ? _lat : null,
         lng: _locationMode == 'map' ? _lng : null,
         inviteeUids: _invitees.toList(),
-        noShowImageBase64: _noShowImageBase64,
         noShowMessage: _noShowMessage.text.trim().isEmpty
             ? null
             : _noShowMessage.text.trim(),
@@ -325,14 +316,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
             maxLines: 2,
             decoration: const InputDecoration(hintText: S.noShowHint),
           ),
-          const SizedBox(height: 8),
-          _ImagePickerTile(
-            imageBase64: _noShowImageBase64,
-            assetFallback: null,
-            label: S.noShowImage,
-            height: 100,
-            onTap: _pickNoShowImage,
-          ),
           const SizedBox(height: 28),
 
           FilledButton(
@@ -375,15 +358,12 @@ class _PickerRow extends StatelessWidget {
 class _ImagePickerTile extends StatelessWidget {
   final String? imageBase64;
   final String? assetFallback;
-  final String? label;
-  final double height;
   final VoidCallback onTap;
+  static const double height = 160;
   const _ImagePickerTile({
     required this.imageBase64,
     required this.assetFallback,
     required this.onTap,
-    this.label,
-    this.height = 160,
   });
 
   @override
@@ -405,10 +385,6 @@ class _ImagePickerTile extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (label != null) ...[
-          Text(label!, style: const TextStyle(color: Colors.black54)),
-          const SizedBox(height: 6),
-        ],
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: Stack(

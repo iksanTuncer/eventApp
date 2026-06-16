@@ -29,12 +29,10 @@ admin.initializeApp({
 const db = admin.firestore();
 const messaging = admin.messaging();
 
-// FCM data payload'ında base64 görsel taşımak limitlidir (4KB). Bu yüzden
-// no-show görselini bildirim olarak değil, data ile "var" bilgisi olarak
-// göndeririz; istemci açınca Firestore'dan çekemez (event silinmiş olur),
-// bu yüzden metni bildirimde, görseli mümkünse imageUrl yerine kısa data
-// ile iletiriz. Pratikte: no-show görseli base64 büyükse sadece metin gider.
-const MAX_DATA_IMAGE = 3000; // ~3KB
+// No-show bildirimi SADECE METİN gider (FCM data limiti ~4KB, görsel sığmaz).
+// Görseli davetlinin görebilmesi için: süresi geçen etkinliğin görselini ve
+// mesajını, silmeden önce her no-show kullanıcının users/{uid}/missed/{eventId}
+// kaydına yazarız. Davetli "Kaçırdıklarım" ekranında görseli + mesajı görür.
 
 async function getTokensForUids(uids) {
   const tokens = [];
@@ -109,21 +107,38 @@ async function processExpiredEvents() {
         if (st === "no" || st === "pending") noShowUids.push(r.id);
       }
 
-      // No-show bildirimi (görsel + metin)
+      const batch = db.batch();
+
       if (noShowUids.length > 0) {
+        // 1) Her no-show kullanıcı için "missed" kaydı (görsel + mesaj saklanır)
+        const missed = {
+          eventId,
+          title: e.title || "",
+          type: e.type || "other",
+          hostUsername: e.hostUsername || "",
+          imageBase64: e.imageBase64 || "",
+          noShowMessage: e.noShowMessage || "",
+          endAt: e.endAt || null,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+        for (const uid of noShowUids) {
+          batch.set(
+            db.collection("users").doc(uid).collection("missed").doc(eventId),
+            missed
+          );
+        }
+
+        // 2) SADECE METİN push bildirimi
         const tokens = await getTokensForUids(noShowUids);
         const body = e.noShowMessage || `"${e.title}" etkinliğini kaçırdın.`;
-        const data = { kind: "no_show", eventTitle: e.title || "" };
-        // Küçükse görseli data ile ilet
-        if (e.noShowImageBase64 && e.noShowImageBase64.length < MAX_DATA_IMAGE) {
-          data.imageBase64 = e.noShowImageBase64;
-        }
-        await sendToTokens(tokens, "Etkinliği kaçırdın", body, data);
+        await sendToTokens(tokens, "Bir etkinliği kaçırdın", body, {
+          kind: "no_show",
+          eventTitle: e.title || "",
+        });
         console.log(`No-show sent for ${eventId} -> ${tokens.length} tokens`);
       }
 
-      // Sil: önce rsvps alt-koleksiyonu, sonra event
-      const batch = db.batch();
+      // 3) Etkinliği ve rsvps alt-koleksiyonunu sil (missed kayıtları kalıcı)
       rsvpsSnap.docs.forEach((r) => batch.delete(r.ref));
       batch.delete(doc.ref);
       await batch.commit();

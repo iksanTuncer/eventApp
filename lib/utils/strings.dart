@@ -66,6 +66,12 @@ class S {
   static const pending = 'Yanıt bekleniyor';
   static const deleteEvent = 'Etkinliği Sil';
 
+  // Kaçırdıklarım
+  static const missedTitle = 'Kaçırdıklarım';
+  static const noMissed = 'Kaçırdığın etkinlik yok';
+  static const missedDismiss = 'Kaldır';
+  static const missedHostLabel = 'Düzenleyen';
+
   // Bildirim
   static const inviteNotifTitle = 'Yeni etkinlik daveti';
   static String inviteNotifBody(String host, String title) =>

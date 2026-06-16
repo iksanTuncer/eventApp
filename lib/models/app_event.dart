@@ -15,7 +15,6 @@ class AppEvent {
   final double? lat;
   final double? lng;
   final List<String> inviteeUids;
-  final String? noShowImageBase64;
   final String? noShowMessage;
   final String status; // 'active' | 'ended'
   final bool processed;
@@ -36,7 +35,6 @@ class AppEvent {
     this.lat,
     this.lng,
     this.inviteeUids = const [],
-    this.noShowImageBase64,
     this.noShowMessage,
     this.status = 'active',
     this.processed = false,
@@ -59,7 +57,6 @@ class AppEvent {
       lat: (m['lat'] as num?)?.toDouble(),
       lng: (m['lng'] as num?)?.toDouble(),
       inviteeUids: List<String>.from(m['inviteeUids'] ?? const []),
-      noShowImageBase64: m['noShowImageBase64'],
       noShowMessage: m['noShowMessage'],
       status: m['status'] ?? 'active',
       processed: m['processed'] ?? false,
@@ -82,7 +79,6 @@ class AppEvent {
         if (lat != null) 'lat': lat,
         if (lng != null) 'lng': lng,
         'inviteeUids': inviteeUids,
-        if (noShowImageBase64 != null) 'noShowImageBase64': noShowImageBase64,
         if (noShowMessage != null) 'noShowMessage': noShowMessage,
         'status': status,
         'processed': processed,

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/app_event.dart';
+import '../models/missed_event.dart';
 import '../utils/constants.dart';
 
 /// events/{eventId} ve alt-koleksiyon rsvps işlemleri.
@@ -113,6 +114,30 @@ class EventService {
   /// İşlendi olarak işaretle (çift bildirimi önler).
   Future<void> markProcessed(String eventId) async {
     await _col.doc(eventId).update({'processed': true, 'status': 'ended'});
+  }
+
+  /// Kaçırdıklarım: cron worker'ın yazdığı, süresi geçip silinen ama
+  /// kullanıcının kaçırdığı etkinliklerin görsel + mesaj kayıtları.
+  Stream<List<MissedEvent>> missedEvents(String uid) {
+    return _db
+        .collection('users')
+        .doc(uid)
+        .collection('missed')
+        .orderBy('createdAt', descending: true)
+        .limit(50)
+        .snapshots()
+        .map((s) =>
+            s.docs.map((d) => MissedEvent.fromMap(d.id, d.data())).toList());
+  }
+
+  /// Kaçırılan etkinlik kaydını kullanıcı listeden kaldırır.
+  Future<void> dismissMissed(String uid, String eventId) async {
+    await _db
+        .collection('users')
+        .doc(uid)
+        .collection('missed')
+        .doc(eventId)
+        .delete();
   }
 
   /// Bir etkinlikte gelmeyen (no/pending) davetlilerin uid listesini döndürür.

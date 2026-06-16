@@ -8,6 +8,7 @@ import '../utils/strings.dart';
 import '../widgets/event_card.dart';
 import 'events/event_type_picker_screen.dart';
 import 'events/event_detail_screen.dart';
+import 'missed_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -41,6 +42,14 @@ class _HomeScreenState extends State<HomeScreen> {
         appBar: AppBar(
           title: Text(auth.profile?.username ?? S.appName),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.history),
+              tooltip: S.missedTitle,
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MissedScreen()),
+              ),
+            ),
             IconButton(
               icon: const Icon(Icons.logout),
               onPressed: () => auth.signOut(),

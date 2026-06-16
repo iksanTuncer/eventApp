@@ -16,6 +16,12 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSelf(uid);
       allow update, delete: if isSelf(uid);
+
+      // Kaçırılan etkinlik kayıtları: sahibi okur/siler, sadece cron (Admin SDK) yazar.
+      match /missed/{eventId} {
+        allow read, delete: if isSelf(uid);
+        allow create, update: if false;
+      }
     }
 
     // --- Etkinlikler ---
