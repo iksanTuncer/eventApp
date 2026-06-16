@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'user_service.dart';
@@ -24,6 +25,13 @@ class NotificationService {
   Future<void> init(String uid) async {
     await _fcm.requestPermission(alert: true, badge: true, sound: true);
 
+    // iOS: uygulama açıkken (foreground) de banner/sound göster.
+    await _fcm.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
     // Yerel bildirim eklentisi (foreground gösterimi için)
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosInit = DarwinInitializationSettings();
@@ -43,6 +51,18 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
+
+    // iOS: FCM token'ı almadan önce APNs token'ının hazır olmasını bekle.
+    // APNs kaydı tamamlanmadan getToken() null dönebilir; kısa bir retry ile
+    // (maks ~10 sn) APNs token'ını bekleriz. Aksi halde cron'a yazılacak
+    // geçerli token oluşmaz ve iOS'a push gelmez.
+    if (Platform.isIOS) {
+      for (var i = 0; i < 10; i++) {
+        final apns = await _fcm.getAPNSToken();
+        if (apns != null) break;
+        await Future.delayed(const Duration(seconds: 1));
+      }
+    }
 
     // Token al ve kullanıcıya kaydet
     final token = await _fcm.getToken();
