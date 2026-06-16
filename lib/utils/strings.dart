@@ -32,6 +32,16 @@ class S {
   static const profileSaved = 'Profil güncellendi';
   static const changePhoto = 'Fotoğrafı değiştir';
 
+  // Hesap silme
+  static const deleteAccount = 'Hesabı Sil';
+  static const deleteAccountTitle = 'Hesabını sil';
+  static const deleteAccountWarning =
+      'Hesabın ve tüm verilerin (profil, oluşturduğun etkinlikler, davetler) '
+      'kalıcı olarak silinecek. Bu işlem geri alınamaz.';
+  static const deleteAccountPasswordPrompt = 'Güvenlik için şifreni gir';
+  static const confirm = 'Onayla';
+  static const accountDeleted = 'Hesabın silindi';
+
   // Görsel seçimi
   static const imageTooLarge =
       'Görsel çok büyük. Lütfen daha küçük bir fotoğraf seç.';

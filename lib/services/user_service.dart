@@ -65,6 +65,35 @@ class UserService {
     return result;
   }
 
+  /// Kullanıcının TÜM verisini siler (App Store/Play hesap-silme gereği):
+  /// host olduğu etkinlikler (+ rsvps alt-koleksiyonu), missed kayıtları,
+  /// private/push (fcmTokens) ve profil dokümanı.
+  /// NOT: Auth hesabı silinmeden ÖNCE çağrılmalı — hesap silinince güvenlik
+  /// kuralları (isSelf) artık geçmez ve bu yazımlar reddedilir.
+  Future<void> deleteUserData(String uid) async {
+    // 1) Host olunan etkinlikler ve alt rsvps koleksiyonları.
+    final events =
+        await _db.collection('events').where('hostUid', isEqualTo: uid).get();
+    for (final ev in events.docs) {
+      final rsvps = await ev.reference.collection('rsvps').get();
+      final batch = _db.batch();
+      for (final r in rsvps.docs) {
+        batch.delete(r.reference);
+      }
+      batch.delete(ev.reference);
+      await batch.commit();
+    }
+    // 2) missed alt-koleksiyonu.
+    final missed = await _col.doc(uid).collection('missed').get();
+    for (final m in missed.docs) {
+      await m.reference.delete();
+    }
+    // 3) private/push (fcmTokens). Yoksa no-op.
+    await _pushDoc(uid).delete();
+    // 4) Profil dokümanı.
+    await _col.doc(uid).delete();
+  }
+
   /// Davetli seçimi için tüm kullanıcıları getirir (kendisi hariç).
   /// Not: Hobi ölçeği için yeterli. Büyürse arama/sayfalama eklenmeli.
   Future<List<AppUser>> listOtherUsers(String myUid) async {

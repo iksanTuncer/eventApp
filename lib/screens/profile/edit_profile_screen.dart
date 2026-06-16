@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_provider.dart';
+import '../../services/auth_service.dart';
 import '../../services/image_service.dart';
 import '../../services/user_service.dart';
 import '../../utils/strings.dart';
@@ -83,6 +84,71 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  Future<void> _deleteAccount() async {
+    // 1) Geri alınamaz uyarısı + onay.
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(S.deleteAccountTitle),
+        content: const Text(S.deleteAccountWarning),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(S.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(S.deleteAccount),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    // 2) Şifre iste (Firebase hesap silmeyi yakın giriş ister → reauthenticate).
+    final passCtrl = TextEditingController();
+    final password = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(S.deleteAccountTitle),
+        content: TextField(
+          controller: passCtrl,
+          obscureText: true,
+          autofocus: true,
+          decoration: const InputDecoration(
+              labelText: S.deleteAccountPasswordPrompt),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(S.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, passCtrl.text),
+            child: const Text(S.confirm),
+          ),
+        ],
+      ),
+    );
+    if (password == null || password.isEmpty || !mounted) return;
+
+    // 3) Sil. authState değişimi root'u giriş ekranına döndürür.
+    setState(() => _busy = true);
+    final auth = context.read<AuthProvider>();
+    try {
+      await auth.deleteAccount(password);
+      if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(AuthService.messageFor(e))));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -132,6 +198,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white))
                   : const Text(S.save),
+            ),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: _busy ? null : _deleteAccount,
+              icon: const Icon(Icons.delete_forever, color: Colors.red),
+              label: const Text(
+                S.deleteAccount,
+                style: TextStyle(color: Colors.red),
+              ),
             ),
           ],
         ),

@@ -54,4 +54,16 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> signOut() => _auth.signOut();
+
+  /// Hesabı ve tüm kullanıcı verisini kalıcı olarak siler.
+  /// Sıra önemli: reauthenticate → Firestore verisini sil → Auth hesabını sil.
+  /// (Auth hesabı silinince güvenlik kuralları Firestore yazımını reddederdi.)
+  /// Auth silinince authState dinleyicisi tetiklenir → root giriş ekranına döner.
+  Future<void> deleteAccount(String password) async {
+    final uid = _firebaseUser?.uid;
+    if (uid == null) return;
+    await _auth.reauthenticate(password);
+    await _users.deleteUserData(uid);
+    await _auth.deleteAccount();
+  }
 }
