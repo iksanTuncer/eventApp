@@ -32,6 +32,7 @@ class _InviteePickerScreenState extends State<InviteePickerScreen> {
   Future<void> _load() async {
     final myUid = context.read<AuthProvider>().firebaseUser!.uid;
     final list = await _users.listOtherUsers(myUid);
+    if (!mounted) return;
     setState(() {
       _all = list;
       _loading = false;

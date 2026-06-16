@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/app_user.dart';
@@ -9,6 +10,7 @@ class AuthProvider extends ChangeNotifier {
   final _auth = AuthService();
   final _users = UserService();
 
+  StreamSubscription<User?>? _authSub;
   User? _firebaseUser;
   AppUser? _profile;
   bool _loading = true;
@@ -25,7 +27,13 @@ class AuthProvider extends ChangeNotifier {
       _profile!.interests.isNotEmpty;
 
   AuthProvider() {
-    _auth.authState.listen(_onAuthChanged);
+    _authSub = _auth.authState.listen(_onAuthChanged);
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _onAuthChanged(User? user) async {

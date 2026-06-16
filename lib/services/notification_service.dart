@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'user_service.dart';
@@ -16,6 +17,9 @@ class NotificationService {
   final _fcm = FirebaseMessaging.instance;
   final _local = FlutterLocalNotificationsPlugin();
   final _userService = UserService();
+
+  StreamSubscription<String>? _tokenRefreshSub;
+  StreamSubscription<RemoteMessage>? _onMessageSub;
 
   Future<void> init(String uid) async {
     await _fcm.requestPermission(alert: true, badge: true, sound: true);
@@ -45,10 +49,21 @@ class NotificationService {
     if (token != null) {
       await _userService.addFcmToken(uid, token);
     }
-    _fcm.onTokenRefresh.listen((t) => _userService.addFcmToken(uid, t));
+    // Önceki abonelikleri (varsa) iptal et — çift dinleyiciyi önler.
+    await dispose();
+    _tokenRefreshSub =
+        _fcm.onTokenRefresh.listen((t) => _userService.addFcmToken(uid, t));
 
     // Uygulama açıkken gelen bildirimi yerel olarak göster
-    FirebaseMessaging.onMessage.listen(_showForeground);
+    _onMessageSub = FirebaseMessaging.onMessage.listen(_showForeground);
+  }
+
+  /// Abonelikleri iptal eder (çift foreground bildirimi/token sızıntısını önler).
+  Future<void> dispose() async {
+    await _tokenRefreshSub?.cancel();
+    await _onMessageSub?.cancel();
+    _tokenRefreshSub = null;
+    _onMessageSub = null;
   }
 
   Future<void> _showForeground(RemoteMessage message) async {
@@ -83,7 +98,9 @@ class NotificationService {
       ),
       iOS: DarwinNotificationDetails(),
     );
-    await _local.show(DateTime.now().millisecond, title, body, details);
+    // 32-bit int aralığında benzersiz ID (millisecond [0-999] çakışmasını önler).
+    final id = DateTime.now().millisecondsSinceEpoch % 2147483647;
+    await _local.show(id, title, body, details);
   }
 }
 

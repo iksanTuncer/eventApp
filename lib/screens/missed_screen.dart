@@ -11,18 +11,34 @@ import '../utils/strings.dart';
 /// (no/pending) etkinliklerin görseli + no-show mesajı.
 /// Cron worker, etkinliği silmeden önce bu kayıtları users/{uid}/missed
 /// altına yazar (push ~4KB sınırına görsel sığmadığı için uygulama içinde gösterilir).
-class MissedScreen extends StatelessWidget {
+class MissedScreen extends StatefulWidget {
   const MissedScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final uid = context.read<AuthProvider>().firebaseUser!.uid;
-    final events = EventService();
+  State<MissedScreen> createState() => _MissedScreenState();
+}
 
+class _MissedScreenState extends State<MissedScreen> {
+  final _events = EventService();
+
+  // Stream bir kez oluşturulur; build'de yeniden üretilmez (gereksiz Firestore
+  // aboneliği/okumasını önler).
+  late final String _uid;
+  late final Stream<List<MissedEvent>> _missed;
+
+  @override
+  void initState() {
+    super.initState();
+    _uid = context.read<AuthProvider>().firebaseUser!.uid;
+    _missed = _events.missedEvents(_uid);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text(S.missedTitle)),
       body: StreamBuilder<List<MissedEvent>>(
-        stream: events.missedEvents(uid),
+        stream: _missed,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -39,7 +55,7 @@ class MissedScreen extends StatelessWidget {
             itemCount: items.length,
             itemBuilder: (_, i) => _MissedCard(
               missed: items[i],
-              onDismiss: () => events.dismissMissed(uid, items[i].eventId),
+              onDismiss: () => _events.dismissMissed(_uid, items[i].eventId),
             ),
           );
         },

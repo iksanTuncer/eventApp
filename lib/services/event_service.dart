@@ -97,25 +97,6 @@ class EventService {
     await batch.commit();
   }
 
-  /// İstemci-taraflı temizlik için: süresi geçmiş, henüz işlenmemiş etkinlikler.
-  /// Sadece bu kullanıcının HOST olduğu etkinlikleri döndürür (kurallar gereği).
-  Future<List<AppEvent>> expiredHostedUnprocessed(String uid) async {
-    final snap = await _col
-        .where('hostUid', isEqualTo: uid)
-        .where('endAt', isLessThan: Timestamp.now())
-        .limit(20)
-        .get();
-    return snap.docs
-        .map((d) => AppEvent.fromMap(d.id, d.data()))
-        .where((e) => !e.processed)
-        .toList();
-  }
-
-  /// İşlendi olarak işaretle (çift bildirimi önler).
-  Future<void> markProcessed(String eventId) async {
-    await _col.doc(eventId).update({'processed': true, 'status': 'ended'});
-  }
-
   /// Kaçırdıklarım: cron worker'ın yazdığı, süresi geçip silinen ama
   /// kullanıcının kaçırdığı etkinliklerin görsel + mesaj kayıtları.
   Stream<List<MissedEvent>> missedEvents(String uid) {
@@ -138,17 +119,5 @@ class EventService {
         .collection('missed')
         .doc(eventId)
         .delete();
-  }
-
-  /// Bir etkinlikte gelmeyen (no/pending) davetlilerin uid listesini döndürür.
-  Future<List<String>> noShowUids(String eventId) async {
-    final rsvps = await _col.doc(eventId).collection('rsvps').get();
-    return rsvps.docs
-        .where((d) {
-          final st = d.data()['status'];
-          return st == RsvpStatus.no || st == RsvpStatus.pending;
-        })
-        .map((d) => d.id)
-        .toList();
   }
 }

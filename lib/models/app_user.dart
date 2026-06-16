@@ -31,13 +31,14 @@ class AppUser {
     );
   }
 
+  // NOT: fcmTokens herkese açık profil dokümanına YAZILMAZ; gizlilik için
+  // users/{uid}/private/push altında tutulur (bkz. UserService.addFcmToken).
   Map<String, dynamic> toMap() => {
         'uid': uid,
         'email': email,
         'username': username,
         if (photoBase64 != null) 'photoBase64': photoBase64,
         'interests': interests,
-        'fcmTokens': fcmTokens,
         'createdAt': createdAt != null
             ? Timestamp.fromDate(createdAt!)
             : FieldValue.serverTimestamp(),

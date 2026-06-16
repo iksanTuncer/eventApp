@@ -8,14 +8,40 @@ service cloud.firestore {
     function isSelf(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
+    // Bir etkinliğin verisini güvenlik içinde okur (read kurallarını bypass eder).
+    function eventData(eventId) {
+      return get(/databases/$(database)/documents/events/$(eventId)).data;
+    }
+    // base64 alan boyutu ~750KB altında mı (Firestore 1MB döküman limiti için).
+    function smallEnough(field) {
+      return !(field in request.resource.data) ||
+        request.resource.data[field].size() < 1000000;
+    }
 
     // --- Kullanıcılar ---
     match /users/{uid} {
-      // Herhangi bir giriş yapmış kullanıcı diğer profilleri okuyabilir
-      // (davetli listesi seçmek için gerekli). Yazma sadece kendi.
+      // Profil okuma: giriş yapmış kullanıcılar (davetli listesi seçmek için).
+      // Hassas veri (fcmTokens) ARTIK burada DEĞİL → users/{uid}/private altında.
       allow read: if isSignedIn();
-      allow create: if isSelf(uid);
-      allow update, delete: if isSelf(uid);
+
+      allow create: if isSelf(uid)
+        && request.resource.data.username is string
+        && request.resource.data.username.size() <= 60
+        && smallEnough('photoBase64')
+        // Token'lar private/ altında tutulur; ana dokümana yazılamaz.
+        && !('fcmTokens' in request.resource.data);
+
+      allow update: if isSelf(uid)
+        && smallEnough('photoBase64')
+        && !('fcmTokens' in request.resource.data);
+
+      allow delete: if isSelf(uid);
+
+      // Özel/hassas veriler (fcmTokens vb.): sadece sahibi.
+      // Cron worker (Admin SDK) kuralları bypass eder, erişebilir.
+      match /private/{doc} {
+        allow read, write: if isSelf(uid);
+      }
 
       // Kaçırılan etkinlik kayıtları: sahibi okur/siler, sadece cron (Admin SDK) yazar.
       match /missed/{eventId} {
@@ -32,31 +58,66 @@ service cloud.firestore {
         request.auth.uid in resource.data.inviteeUids
       );
 
-      // Oluşturma: host kendisi olmalı
+      // Oluşturma: host kendisi olmalı + alan doğrulaması
       allow create: if isSignedIn()
-        && request.resource.data.hostUid == request.auth.uid;
+        && request.resource.data.hostUid == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.startAt is timestamp
+        && request.resource.data.endAt is timestamp
+        && request.resource.data.inviteeUids is list
+        && request.resource.data.inviteeUids.size() <= 200
+        && smallEnough('imageBase64')
+        && smallEnough('noShowMessage');
 
-      // Güncelleme/Silme: sadece host
-      allow update, delete: if isSignedIn()
+      // Güncelleme: sadece host; hostUid değiştirilemez.
+      allow update: if isSignedIn()
+        && resource.data.hostUid == request.auth.uid
+        && request.resource.data.hostUid == resource.data.hostUid
+        && smallEnough('imageBase64');
+
+      // Silme: sadece host
+      allow delete: if isSignedIn()
         && resource.data.hostUid == request.auth.uid;
 
       // --- RSVP yanıtları ---
       match /rsvps/{uid} {
-        // Host ve davetli okuyabilir
-        allow read: if isSignedIn();
-        // Davetli kendi yanıtını yazabilir; host da oluşturabilir (başlangıç pending)
-        allow create: if isSignedIn();
-        allow update: if isSelf(uid) ||
-          get(/databases/$(database)/documents/events/$(eventId)).data.hostUid == request.auth.uid;
-        allow delete: if isSignedIn();
+        // Okuma: host ya da kendi yanıtı (rastgele enumerasyonu engeller).
+        allow read: if isSelf(uid)
+          || eventData(eventId).hostUid == request.auth.uid;
+
+        // Oluşturma: host (başlangıç pending) ya da davetli kendi kaydı.
+        allow create: if eventData(eventId).hostUid == request.auth.uid
+          || (isSelf(uid) && request.auth.uid in eventData(eventId).inviteeUids);
+
+        // Güncelleme: kendi yanıtı ya da host.
+        allow update: if isSelf(uid)
+          || eventData(eventId).hostUid == request.auth.uid;
+
+        // Silme: kendi kaydı ya da host (etkinlik temizliği). Rastgele silmeyi engeller.
+        allow delete: if isSelf(uid)
+          || eventData(eventId).hostUid == request.auth.uid;
       }
     }
 
     // --- Bildirim kuyruğu ---
-    // İstemci davet/no-show görevini buraya yazar; cron worker (Admin SDK,
-    // kuralları bypass eder) okur, FCM gönderir ve siler. İstemci sadece create.
+    // İstemci davet görevini buraya yazar; cron worker (Admin SDK, kuralları
+    // bypass eder) okur, FCM gönderir ve siler. İstemci sadece create yapabilir.
+    // KÖTÜYE KULLANIM KORUMASI: yalnızca etkinliğin host'u, o etkinliğin GERÇEK
+    // davetlilerine 'invite' görevi yazabilir (rastgele push spam'i engellenir).
     match /notifications/{id} {
-      allow create: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.kind == 'invite'
+        && request.resource.data.eventId is string
+        && eventData(request.resource.data.eventId).hostUid == request.auth.uid
+        && request.resource.data.targetUids is list
+        && request.resource.data.targetUids.size() <= 200
+        && eventData(request.resource.data.eventId)
+             .inviteeUids.hasAll(request.resource.data.targetUids)
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 140
+        && request.resource.data.body is string
+        && request.resource.data.body.size() <= 500;
       allow read, update, delete: if false;
     }
   }
