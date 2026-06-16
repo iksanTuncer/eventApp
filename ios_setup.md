@@ -27,13 +27,11 @@ Xcode ile `Runner` hedefine ekle (sürükle-bırak, "Copy items if needed" işar
 - Firebase Console > Proje Ayarları > Cloud Messaging > APNs key'i yükle.
 - ÖNEMLİ: Push bildirimi iOS SİMÜLATÖRDE çalışmaz, fiziksel cihaz gerekir.
 
-## 4. Google Maps (iOS)
-- `ios/Runner/AppDelegate.swift` içine, `application` fonksiyonuna:
-  ```swift
-  GMSServices.provideAPIKey("BURAYA_GOOGLE_MAPS_API_KEY")
-  ```
-  ve üste `import GoogleMaps`.
-- Google Cloud Console'da "Maps SDK for iOS"u etkinleştir.
+## 4. Harita (Google Maps GEREKMİYOR)
+Uygulama haritayı `flutter_map` + OpenStreetMap ile gösterir → **API key / SDK
+yapılandırması GEREKMEZ**. AppDelegate'e GMSServices eklemeyin. Tek gereksinim
+internet erişimidir (zaten var). Eski "Google Maps" notları geçersizdir.
 
 ## 5. Minimum iOS sürümü
-`ios/Podfile` içinde `platform :ios, '13.0'` (Firebase için).
+`ios/Podfile` içinde `platform :ios, '15.0'` (güncel Firebase iOS SDK için).
+Podfile `pod install`/`flutter build` ile üretilir; satır yorumdaysa açıp ayarla.

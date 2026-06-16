@@ -11,21 +11,25 @@ Merhaba, EventApp projesine Mac mini'den iOS derlemesi için devam ediyoruz.
 
 DURUM / NEREDE KALDIK:
 - Flutter + Firebase (ücretsiz Spark, kartsız) etkinlik davet uygulaması. Android APK çalışıyor.
-- Push backend hazır ve çalışıyor: client → Firestore 'notifications' → GitHub Actions worker → FCM.
-  GitHub'ın kendi cron'u güvenilmezdi; cron-job.org her dakika worker'ı tetikliyor (kuruldu, 204 OK, doğrulandı).
-- "Kaçırdıklarım" ekranı, tıklanabilir harita (maps'te açılıyor), RSVP "Cevap" etiketi eklendi.
-- iOS kod tarafı HAZIR: firebase_options.dart iOS'u içeriyor, Info.plist izinleri+push var,
-  bundle id com.eventapp.eventApp, AppDelegate standart. Repoda commit'li.
+- Push backend hazır: client → Firestore 'notifications' → cron worker (Firebase Admin) → FCM.
+  cron-job.org her dakika worker'ı tetikliyor (kuruldu, doğrulandı). Süre/silme TAMAMEN cron'a ait.
+- Son oturumda eklendi (hepsi commit'li): kapsamlı güvenlik sertleştirmesi (Firestore kuralları
+  sıkılaştırıldı ve CANLIYA DEPLOY EDİLDİ), cron idempotency (çift bildirim yok) + ölü token temizliği,
+  profil düzenleme (ad+foto), etkinlik foto seçici düzeltmesi (galeri+kamera), RSVP listelerinde foto+isim,
+  istemci sızıntı/mounted düzeltmeleri. fcmTokens artık users/{uid}/private/push altında (gizlilik).
+- iOS kod tarafı HAZIR: Info.plist izinleri+push var, bundle id com.eventapp.eventApp, AppDelegate standart.
+  NOT: firebase_options.dart ve GoogleService-Info.plist gitignore'da → clone'la GELMEZ; flutterfire üretir.
 
 ŞİMDİ YAPACAĞIMIZ: Mac'te iOS derlemesi + iPhone'da push testi.
 Adım adım rehber repoda: IOS_BUILD_GUIDE.md (lütfen onu referans al).
 
 ELİMDE HAZIR OLANLAR: Mac mini, Xcode, aktif Apple Developer hesabı.
 
-KRİTİK 2 NOKTA (rehberde):
-1) ios/Runner/GoogleService-Info.plist gitignore'da → clone'la gelmez.
-   flutterfire configure --project eventapp-78a1f ile yeniden üreteceğiz.
+KRİTİK NOKTALAR (rehberde):
+1) firebase_options.dart + ios/Runner/GoogleService-Info.plist gitignore'da → clone'la gelmez.
+   İkisini de "flutterfire configure --project eventapp-78a1f" yeniden üretir (Bölüm 2.2).
 2) iOS push için Apple'dan APNs .p8 anahtarı üretip Firebase Cloud Messaging'e yükleyeceğiz.
+3) Firestore kuralları zaten deploy edildi → Mac'te yeniden deploy GEREKMEZ (kural değiştirmedikçe).
 
 SABİTLER:
 - Firebase proje: eventapp-78a1f

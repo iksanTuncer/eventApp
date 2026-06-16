@@ -26,12 +26,13 @@ ister. Bu proje kart bağlamadan çalışmak ZORUNDA. Bu yüzden:
 
 - ❌ Firebase Cloud Storage KULLANMA. → ✅ Fotoğrafları sıkıştırıp (maks ~200KB,
   uzun kenar 800px, JPEG q70) base64 string olarak Firestore'a yaz.
-- ❌ Firebase Cloud Functions (zamanlanmış) KULLANMA. → ✅ Süre kontrolü iki yoldan:
-  1. **İstemci-taraflı:** Uygulama açıldığında `CleanupService` süresi geçen
-     eventleri kontrol eder, "no-show" bildirimini yerelde gönderir, sonra siler.
-  2. **GitHub Actions cron:** `scripts/cron_worker.js` her 5 dakikada bir
-     çalışır, süresi geçen eventleri bulur, FCM ile bildirim atar, Firestore'dan
-     siler. Firebase Admin SDK + service account JSON ile (GitHub Secrets'ta saklı).
+- ❌ Firebase Cloud Functions (zamanlanmış) KULLANMA. → ✅ Süre kontrolünün TAMAMINI
+  **GitHub Actions / cron-job.org cron** yapar: `scripts/cron_worker.js` çalışır,
+  süresi geçen eventleri bulur, gelmeyenlere FCM atar, "missed" kaydı yazar,
+  sonra Firestore'dan siler. Firebase Admin SDK + service account JSON ile
+  (GitHub Secrets'ta saklı). İdempotent (`noShowProcessed` bayrağı) → çift bildirim yok.
+  > NOT: İstemci-taraflı `CleanupService` KALDIRILDI (cron ile yarışıp "Kaçırdıklarım"
+  > kaydının kaybolmasına yol açıyordu). Süre/silme artık YALNIZCA cron'a aittir.
 - Firestore limitlerini koru: günlük 50K okuma / 20K yazma. Query'leri dar tut,
   gereksiz dinleyici (listener) açma, `limit()` kullan.
 - FCM tamamen ücretsiz, sınırsız → bildirimler güvenle FCM ile.
@@ -52,22 +53,30 @@ ister. Bu proje kart bağlamadan çalışmak ZORUNDA. Bu yüzden:
    - Başlangıç tarih+saat (picker), Bitiş tarih+saat (picker)
    - Lokasyon: cihaz GPS ile harita konumu İŞARETLE **veya** serbest metin
    - Davetli listesi: kullanıcı listesinden seç (multi-select)
-   - "No-show mesajı": gelmeyenlere gidecek görsel + metin (oluştururken belirlenir)
+   - "No-show mesajı": gelmeyenlere gidecek METİN (oluştururken belirlenir).
+     Push metin-only gider; etkinlik görseli + mesaj "Kaçırdıklarım"da gösterilir.
 7. **Davetiye:** Davet anında davetlilere FCM bildirimi gider.
 8. **Davet Yanıtı:** Davetli "Katılacağım / Katılmayacağım" der.
 9. **Event Detay (düzenleyene özel):** Katılacaklar / Katılmayacaklar / Yanıtsızlar listesi.
-10. **Bitiş anında:** Gelmeyen (RSVP=no veya yanıtsız) kullanıcılara no-show
-    görsel+metin bildirimi → sonra event + tüm alt verileri silinir.
+10. **Bitiş anında (cron):** Gelmeyen (RSVP=no veya yanıtsız) kullanıcılara no-show
+    metin bildirimi + "Kaçırdıklarım" kaydı (görsel+mesaj) → sonra event + tüm
+    alt verileri silinir. Profil ekranı: kullanıcı ad+fotoğrafını düzenleyebilir.
 
 ## 4. Veri Modeli (Firestore)
 
 Detay: `firestore/SCHEMA.md`. Özet koleksiyonlar:
-- `users/{uid}`: profil, username, photoBase64, interests[], fcmTokens[]
+- `users/{uid}`: profil, username, photoBase64, interests[]
+  - `users/{uid}/private/push`: `fcmTokens[]` — GİZLİLİK için profilden ayrı tutulur
+    (profil herkese-okunur; token'lar yalnızca sahibi + cron Admin SDK erişir).
+  - `users/{uid}/missed/{eventId}`: kaçırılan etkinlik kaydı (yalnızca cron yazar).
 - `events/{eventId}`: tüm event verisi (host, type, görsel, zamanlar, lokasyon,
-  noShowMessage, invitees[], status)
+  noShowMessage, invitees[], status, noShowProcessed)
 - `events/{eventId}/rsvps/{uid}`: katılım yanıtları (status: pending/yes/no)
+- `notifications/{id}`: davet kuyruğu (host yazar, cron okuyup FCM atar ve siler).
 
-Silme: event silinince alt-koleksiyon `rsvps` de silinmeli (batch/recursive).
+Silme: event silinince alt-koleksiyon `rsvps` de silinmeli (cron, ≤500'lük batch).
+Güvenlik kuralları sıkılaştırıldı (host-only notifications, self/host rsvps,
+alan doğrulaması) ve canlıya deploy edildi → `firestore/firestore.rules`.
 
 ## 5. Kod Standartları
 

@@ -14,7 +14,7 @@
 
 Bunlar repoda commit'li, tekrar yapman GEREKMİYOR:
 
-- [x] `lib/firebase_options.dart` → iOS yapılandırması mevcut (appId + `iosBundleId: com.eventapp.eventApp`)
+- [x] `ios/Runner.xcodeproj` → bundle id ve `AppDelegate.swift` standart Flutter (push otomatik)
 - [x] `ios/Runner/Info.plist` → tüm izin metinleri hazır:
   - Konum (`NSLocationWhenInUseUsageDescription`)
   - Kamera (`NSCameraUsageDescription`)
@@ -26,8 +26,16 @@ Bunlar repoda commit'li, tekrar yapman GEREKMİYOR:
 - [x] Bildirim izni kod içinde isteniyor (`NotificationService.init`)
 - [x] Push backend (cron-job.org + GitHub Actions) çalışıyor — iOS'a da gönderir
 
-> ⚠️ **Tek eksik dosya:** `ios/Runner/GoogleService-Info.plist` **gitignore'da** olduğu için
-> `git clone` ile Mac'e GELMEZ. Bölüm 2'de bunu çözüyoruz.
+> ⚠️ **Eksik gelecek 2 dosya (gitignore'da, `git clone` ile GELMEZ):**
+> `lib/firebase_options.dart` ve `ios/Runner/GoogleService-Info.plist`.
+> İkisini de **Bölüm 2.2'deki `flutterfire configure` komutu yeniden üretir** — ek iş yok.
+>
+> ✅ **Backend hazır:** Firestore güvenlik kuralları bu oturumda **deploy edildi**
+> (`eventapp-78a1f`). Kuralları DEĞİŞTİRMEDİĞİN sürece Mac'te yeniden deploy GEREKMEZ.
+> (Kuralları değiştirirsen: `firebase deploy --only firestore:rules --project eventapp-78a1f`.)
+>
+> ℹ️ Bu oturumda eklendi (clone ile gelir): profil düzenleme, etkinlik foto seçici
+> düzeltmesi, RSVP listelerinde foto+isim, güvenlik sertleştirmesi, cron idempotency.
 
 ---
 

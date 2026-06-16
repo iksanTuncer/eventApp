@@ -14,13 +14,9 @@
 <uses-permission android:name="android.permission.CAMERA"/>
 ```
 
-Google Maps API anahtarını `<application>` içine ekle:
-
-```xml
-<meta-data
-    android:name="com.google.android.geo.API_KEY"
-    android:value="BURAYA_GOOGLE_MAPS_API_KEY"/>
-```
+> NOT: Google Maps API anahtarı GEREKMEZ. Uygulama haritayı `flutter_map` +
+> OpenStreetMap ile gösterir (anahtarsız, ücretsiz). `com.google.android.geo.API_KEY`
+> meta-data'sı EKLENMEZ. Eski Google Maps notları geçersizdir.
 
 ## 2. android/app/build.gradle (veya build.gradle.kts)
 
@@ -39,8 +35,7 @@ classpath 'com.google.gms:google-services:4.4.2'
 Firebase Console > Proje Ayarları > Android uygulaması ekle > indirilen
 `google-services.json`'u `android/app/` içine koy.
 
-## 5. Google Maps API Key (ÜCRETSİZ kotada)
-- Google Cloud Console > APIs & Services > "Maps SDK for Android" etkinleştir.
-- API key oluştur. Aylık ücretsiz kullanım kotası hobi için fazlasıyla yeter.
-- Kartsız kullanmak istersen harita yerine sadece "metin konum" modunu kullan;
-  uygulama iki modu da destekliyor.
+## 5. Harita (Google Maps GEREKMİYOR)
+Uygulama haritayı `flutter_map` + OpenStreetMap ile çizer → **API key / SDK
+yapılandırması yok**. Konum iki modu destekler: haritadan işaretle (OSM) veya
+metin. Hiçbir Google Cloud Maps ayarı gerekmez.

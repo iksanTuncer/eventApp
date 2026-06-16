@@ -34,7 +34,7 @@ event_app/
 ├── lib/
 │   ├── main.dart
 │   ├── models/               # AppUser, AppEvent, Rsvp
-│   ├── services/             # auth, user, event, image, notification, cleanup, location
+│   ├── services/             # auth, user, event, image, notification(+queue), location
 │   ├── screens/              # auth, onboarding, events, home
 │   ├── widgets/              # event_card
 │   ├── theme/                # app_theme
@@ -115,8 +115,9 @@ flutter run            # bağlı cihaz/emülatörde
 → Ana ekran (Davetlerim / Etkinliklerim) → "Etkinlik Oluştur" → tip seç → formu
 doldur (görsel, tarih/saat, konum, davetliler, no-show mesajı) → davetler kuyruğa
 yazılır → cron worker FCM bildirimini yollar → davetli "Katılacağım/Katılmayacağım"
-der → host detayda listeleri görür → bitiş saatinde gelmeyenlere no-show bildirimi
-gider → etkinlik ve tüm verileri silinir (cron + istemci, iki yönlü güvence).
+der → host detayda listeleri (foto+isim) görür → bitiş saatinde cron, gelmeyenlere
+no-show bildirimi + "Kaçırdıklarım" kaydı yazar → etkinlik ve tüm verileri silinir.
+Süre/silme TAMAMEN cron'a aittir (istemci-taraflı temizlik kaldırıldı).
 
 ## Ücretsiz Kalma — Limitler
 - Firestore: 50K okuma / 20K yazma / gün, 1GB depolama. Hobi için fazlasıyla yeter.
@@ -126,9 +127,9 @@ gider → etkinlik ve tüm verileri silinir (cron + istemci, iki yönlü güvenc
 - Auth: 50K aktif kullanıcı/ay ücretsiz.
 
 ## Bilinen Sınırlamalar / Notlar
-- No-show görseli base64 büyükse FCM data limitine (4KB) takılır; bu durumda
-  sadece metin bildirim gider. Küçük/ikonik görsel kullan.
-- GitHub cron min. aralık ~5 dakika; "tam saniyesinde" bildirim beklenmemeli.
-  İstemci-taraflı temizlik, host uygulamayı açınca anında devreye girer.
+- No-show push'u METİN-only gider (FCM data ~4KB limiti). Etkinlik görseli +
+  mesaj, davetlinin "Kaçırdıklarım" ekranında uygulama içinde gösterilir.
+- Bildirim gönderimi cron tetiklemesine bağlı (cron-job.org her dakika tetikler);
+  "tam saniyesinde" bildirim beklenmemeli. Süre/silme tamamen cron'a aittir.
 - Çok büyürse (binlerce kullanıcı) Firestore okuma limitleri zorlanır; o noktada
   Supabase'e geçiş veya Blaze düşünülebilir. Hobi ölçeği için gerek yok.
