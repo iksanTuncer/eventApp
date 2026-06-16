@@ -25,6 +25,17 @@ class S {
   static const username = 'Kullanıcı adı';
   static const usernameRequired = 'Kullanıcı adı gerekli';
   static const addPhoto = 'Fotoğraf ekle (opsiyonel)';
+
+  // Profil düzenleme
+  static const editProfileTitle = 'Profili Düzenle';
+  static const editProfile = 'Profili düzenle';
+  static const profileSaved = 'Profil güncellendi';
+  static const changePhoto = 'Fotoğrafı değiştir';
+
+  // Görsel seçimi
+  static const imageTooLarge =
+      'Görsel çok büyük. Lütfen daha küçük bir fotoğraf seç.';
+  static const imagePickFailed = 'Fotoğraf alınamadı. Tekrar dene.';
   static const interestsTitle = 'Hangi etkinliklerle ilgileniyorsun?';
   static const interestsSubtitle = 'Birden fazla seçebilirsin';
   static const finish = 'Bitir';

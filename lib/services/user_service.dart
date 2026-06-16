@@ -30,17 +30,39 @@ class UserService {
     await _col.doc(uid).update(data);
   }
 
+  /// FCM token'ları herkese açık profil dokümanında DEĞİL, sadece sahibinin
+  /// (ve Admin SDK ile cron worker'ın) okuyabildiği özel alt-dokümanda tutulur.
+  DocumentReference<Map<String, dynamic>> _pushDoc(String uid) =>
+      _col.doc(uid).collection('private').doc('push');
+
   /// FCM token ekle (çoklu cihaz). arrayUnion ile tekrar yazımı önler.
   Future<void> addFcmToken(String uid, String token) async {
-    await _col.doc(uid).update({
+    await _pushDoc(uid).set({
       'fcmTokens': FieldValue.arrayUnion([token]),
-    });
+    }, SetOptions(merge: true));
   }
 
   Future<void> removeFcmToken(String uid, String token) async {
-    await _col.doc(uid).update({
+    await _pushDoc(uid).set({
       'fcmTokens': FieldValue.arrayRemove([token]),
-    });
+    }, SetOptions(merge: true));
+  }
+
+  /// Verilen uid'ler için kullanıcı haritası döndürür (uid -> AppUser).
+  /// Firestore whereIn 10'lu sınırı nedeniyle parçalara bölünerek okunur.
+  Future<Map<String, AppUser>> getUsersByUids(List<String> uids) async {
+    final result = <String, AppUser>{};
+    final unique = uids.toSet().toList();
+    for (var i = 0; i < unique.length; i += 10) {
+      final end = (i + 10) < unique.length ? i + 10 : unique.length;
+      final chunk = unique.sublist(i, end);
+      final snap =
+          await _col.where(FieldPath.documentId, whereIn: chunk).get();
+      for (final d in snap.docs) {
+        result[d.id] = AppUser.fromMap(d.id, d.data());
+      }
+    }
+    return result;
   }
 
   /// Davetli seçimi için tüm kullanıcıları getirir (kendisi hariç).

@@ -3,9 +3,11 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/app_event.dart';
+import '../../models/app_user.dart';
 import '../../services/auth_provider.dart';
 import '../../services/event_service.dart';
 import '../../services/image_service.dart';
+import '../../services/user_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/strings.dart';
 import '../../widgets/static_map.dart';
@@ -22,8 +24,11 @@ class EventDetailScreen extends StatefulWidget {
 
 class _EventDetailScreenState extends State<EventDetailScreen> {
   final _events = EventService();
+  final _users = UserService();
   AppEvent? _event;
   String? _myStatus;
+  // Host görünümünde RSVP listelerinde fotoğraf göstermek için davetli profilleri.
+  Map<String, AppUser> _inviteeUsers = {};
   bool _loading = true;
 
   @override
@@ -42,10 +47,16 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     if (uid != null) {
       mine = await _events.myRsvpStatus(widget.eventId, uid);
     }
+    // Host görünümünde davetli fotoğraf+adlarını listelemek için profilleri çek.
+    Map<String, AppUser> users = {};
+    if (widget.isHost && e != null && e.inviteeUids.isNotEmpty) {
+      users = await _users.getUsersByUids(e.inviteeUids);
+    }
     if (!mounted) return;
     setState(() {
       _event = e;
       _myStatus = mine;
+      _inviteeUsers = users;
       _loading = false;
     });
   }
@@ -58,12 +69,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       auth.profile!.username,
       status,
     );
+    if (!mounted) return;
     setState(() => _myStatus = status);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cevabın kaydedildi')),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Cevabın kaydedildi')),
+    );
   }
 
   Future<void> _delete() async {
@@ -279,18 +289,47 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 style: const TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         if (list.isEmpty)
           const Padding(
             padding: EdgeInsets.only(left: 18, top: 2),
             child: Text('—', style: TextStyle(color: Colors.black45)),
           )
         else
-          ...list.map((r) => Padding(
-                padding: const EdgeInsets.only(left: 18, top: 2),
-                child: Text('• ${r.username}'),
-              )),
+          ...list.map(_rsvpTile),
       ],
+    );
+  }
+
+  /// Tek bir RSVP satırı: fotoğraf + kullanıcı adı (alt alta listelenir).
+  Widget _rsvpTile(Rsvp r) {
+    final user = _inviteeUsers[r.uid];
+    final photo = user?.photoBase64;
+    final hasPhoto = photo != null && photo.isNotEmpty;
+    final name =
+        r.username.isNotEmpty ? r.username : (user?.username ?? '');
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: const Color(0xFFE0D5C5),
+            backgroundImage:
+                hasPhoto ? MemoryImage(ImageService.decode(photo)) : null,
+            child: hasPhoto
+                ? null
+                : Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                    style: const TextStyle(
+                        color: Color(0xFF6F4E37),
+                        fontWeight: FontWeight.w600),
+                  ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Text(name.isEmpty ? '—' : name)),
+        ],
+      ),
     );
   }
 }

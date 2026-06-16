@@ -61,9 +61,22 @@ class _EventFormScreenState extends State<EventFormScreen> {
 
   Future<void> _pickEventImage() async {
     final fromCamera = await showImageSourceSheet(context);
-    if (fromCamera == null) return;
-    final b64 = await _imageService.pickAndEncode(fromCamera: fromCamera);
-    if (b64 != null) setState(() => _imageBase64 = b64);
+    if (fromCamera == null || !mounted) return;
+    final res = await _imageService.pick(fromCamera: fromCamera);
+    if (!mounted) return;
+    switch (res.status) {
+      case ImagePickStatus.success:
+        setState(() => _imageBase64 = res.base64);
+        break;
+      case ImagePickStatus.tooLarge:
+        _err(S.imageTooLarge);
+        break;
+      case ImagePickStatus.failed:
+        _err(S.imagePickFailed);
+        break;
+      case ImagePickStatus.cancelled:
+        break; // sessiz
+    }
   }
 
   Future<void> _pickDateTime(bool isStart) async {
@@ -387,19 +400,23 @@ class _ImagePickerTile extends StatelessWidget {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Stack(
-            children: [
-              content,
-              Positioned(
-                right: 8,
-                bottom: 8,
-                child: FilledButton.tonalIcon(
-                  onPressed: onTap,
-                  icon: const Icon(Icons.photo_camera, size: 18),
-                  label: const Text(S.changeImage),
+          // Tüm görsel/placeholder alanı tıklanabilir (sadece buton değil).
+          child: InkWell(
+            onTap: onTap,
+            child: Stack(
+              children: [
+                content,
+                Positioned(
+                  right: 8,
+                  bottom: 8,
+                  child: FilledButton.tonalIcon(
+                    onPressed: onTap,
+                    icon: const Icon(Icons.photo_camera, size: 18),
+                    label: const Text(S.changeImage),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],

@@ -9,6 +9,7 @@ import '../widgets/event_card.dart';
 import 'events/event_type_picker_screen.dart';
 import 'events/event_detail_screen.dart';
 import 'missed_screen.dart';
+import 'profile/edit_profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,22 +20,37 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _events = EventService();
 
+  // Stream'ler bir kez oluşturulur; her build'de yeniden üretilirse
+  // StreamBuilder her seferinde yeniden abone olup gereksiz Firestore
+  // okuması yapar (ücretsiz kota koruması).
+  late final String _uid;
+  late final Stream<List<AppEvent>> _invited;
+  late final Stream<List<AppEvent>> _hosted;
+  NotificationService? _notif;
+
   @override
   void initState() {
     super.initState();
+    _uid = context.read<AuthProvider>().firebaseUser!.uid;
+    _invited = _events.invitedEvents(_uid);
+    _hosted = _events.hostedEvents(_uid);
     // Açılışta sadece bildirim init. Süresi geçen etkinliklerin işlenmesi
-    // (no-show FCM + silme) tamamen cron worker'a bırakıldı; istemci silmesi
-    // FCM gönderemediği için no-show bildirimini engelliyordu.
+    // (no-show FCM + silme) tamamen cron worker'a bırakıldı.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final uid = context.read<AuthProvider>().firebaseUser!.uid;
-      await NotificationService().init(uid);
+      _notif = NotificationService();
+      await _notif!.init(_uid);
     });
+  }
+
+  @override
+  void dispose() {
+    _notif?.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final uid = auth.firebaseUser!.uid;
 
     return DefaultTabController(
       length: 2,
@@ -42,6 +58,14 @@ class _HomeScreenState extends State<HomeScreen> {
         appBar: AppBar(
           title: Text(auth.profile?.username ?? S.appName),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.person_outline),
+              tooltip: S.editProfile,
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+              ),
+            ),
             IconButton(
               icon: const Icon(Icons.history),
               tooltip: S.missedTitle,
@@ -67,12 +91,12 @@ class _HomeScreenState extends State<HomeScreen> {
         body: TabBarView(
           children: [
             _EventList(
-              stream: _events.invitedEvents(uid),
+              stream: _invited,
               emptyText: S.noInvites,
               isHost: false,
             ),
             _EventList(
-              stream: _events.hostedEvents(uid),
+              stream: _hosted,
               emptyText: S.noEvents,
               isHost: true,
             ),

@@ -6,18 +6,30 @@ import '../../services/user_service.dart';
 import '../../utils/strings.dart';
 import '../../widgets/image_source_sheet.dart';
 
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+/// Mevcut profili (kullanıcı adı + fotoğraf) düzenler.
+/// Ana ekrandan erişilir; onboarding'deki ProfileScreen'den farklı olarak
+/// alanları mevcut değerlerle ön-doldurur ve kaydedince geri döner.
+class EditProfileScreen extends StatefulWidget {
+  const EditProfileScreen({super.key});
+
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _EditProfileScreenState extends State<EditProfileScreen> {
   final _username = TextEditingController();
   final _imageService = ImageService();
   final _users = UserService();
   String? _photoBase64;
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = context.read<AuthProvider>().profile;
+    _username.text = profile?.username ?? '';
+    _photoBase64 = profile?.photoBase64;
+  }
 
   @override
   void dispose() {
@@ -57,6 +69,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         photoBase64: _photoBase64,
       );
       await auth.reloadProfile();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text(S.profileSaved)));
+      Navigator.pop(context);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text(S.errorGeneric)));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -65,7 +86,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text(S.profileTitle)),
+      appBar: AppBar(title: const Text(S.editProfileTitle)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -89,10 +110,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            const Center(
-                child: Text(S.addPhoto,
-                    style: TextStyle(color: Colors.black54))),
-            const SizedBox(height: 28),
+            Center(
+              child: TextButton.icon(
+                onPressed: _pickPhoto,
+                icon: const Icon(Icons.photo_camera, size: 18),
+                label: const Text(S.changePhoto),
+              ),
+            ),
+            const SizedBox(height: 20),
             TextField(
               controller: _username,
               decoration: const InputDecoration(labelText: S.username),
@@ -106,7 +131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       width: 22,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white))
-                  : const Text(S.next),
+                  : const Text(S.save),
             ),
           ],
         ),

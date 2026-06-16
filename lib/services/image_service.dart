@@ -5,6 +5,17 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import '../utils/constants.dart';
 
+/// Fotoğraf seçim sonucu (çağırana net geri bildirim için).
+enum ImagePickStatus { success, cancelled, tooLarge, failed }
+
+class ImagePickResult {
+  final ImagePickStatus status;
+  final String? base64;
+  const ImagePickResult(this.status, [this.base64]);
+
+  bool get ok => status == ImagePickStatus.success && base64 != null;
+}
+
 /// Fotoğrafı seçer, Firestore'a sığacak şekilde sıkıştırır ve base64 döndürür.
 /// Firebase Storage KULLANMAZ (ücretsiz kalmak için).
 class ImageService {
@@ -12,7 +23,8 @@ class ImageService {
 
   /// Galeri veya kameradan fotoğraf seçip sıkıştırılmış base64 döndürür.
   /// Hedef: uzun kenar 800px, JPEG q70, ~250KB altı.
-  Future<String?> pickAndEncode({bool fromCamera = false}) async {
+  /// Sonuç tipi sayesinde çağıran "iptal / çok büyük / hata" durumlarını ayırır.
+  Future<ImagePickResult> pick({bool fromCamera = false}) async {
     try {
       final XFile? picked = await _picker.pickImage(
         source: fromCamera ? ImageSource.camera : ImageSource.gallery,
@@ -20,17 +32,25 @@ class ImageService {
         maxHeight: AppConfig.imageMaxDimension.toDouble(),
         imageQuality: AppConfig.imageQuality,
       );
-      if (picked == null) return null;
+      if (picked == null) {
+        return const ImagePickResult(ImagePickStatus.cancelled);
+      }
 
       // image_picker zaten maxWidth/quality ile küçültür. Ek sıkıştırma denenir;
       // bazı cihaz formatlarında (ör. HEIC) sıkıştırma null dönebilir — bu durumda
-      // picker'ın çıktısı doğrudan kullanılır (görselin "seçilememe" sorununu önler).
+      // picker'ın çıktısı kullanılır.
       Uint8List? bytes = await _compress(File(picked.path));
       bytes ??= await picked.readAsBytes();
-      return base64Encode(bytes);
+
+      // GÜVENLİK: Sıkıştırma başarısız olup ham (büyük) görsel geldiyse, base64
+      // Firestore 1MB döküman limitini aşabilir. Sınırı aşan görseli reddet.
+      if (bytes.lengthInBytes > AppConfig.maxImageBytes) {
+        return const ImagePickResult(ImagePickStatus.tooLarge);
+      }
+      return ImagePickResult(ImagePickStatus.success, base64Encode(bytes));
     } catch (_) {
-      // Kamera/galeri izni reddi veya beklenmedik hata: sessizce null dön.
-      return null;
+      // Kamera/galeri izni reddi veya beklenmedik hata.
+      return const ImagePickResult(ImagePickStatus.failed);
     }
   }
 
