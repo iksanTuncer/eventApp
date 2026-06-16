@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EventApp — Gizlilik Politikası</title>
+  <style>
+    :root { --coffee: #6F4E37; --bg: #FBF7F1; --card: #ffffff; --muted: #6b6155; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #2b2620;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.65; }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; }
+    header { border-bottom: 3px solid var(--coffee); padding-bottom: 16px; margin-bottom: 24px; }
+    h1 { color: var(--coffee); margin: 0 0 4px; font-size: 28px; }
+    .updated { color: var(--muted); font-size: 14px; }
+    h2 { color: var(--coffee); margin-top: 32px; font-size: 20px; }
+    .card { background: var(--card); border-radius: 14px; padding: 20px 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+    ul { padding-left: 20px; }
+    li { margin: 6px 0; }
+    a { color: var(--coffee); }
+    code { background: #efe7db; padding: 1px 6px; border-radius: 6px; font-size: 90%; }
+    footer { margin-top: 40px; color: var(--muted); font-size: 13px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>EventApp — Gizlilik Politikası</h1>
+      <div class="updated">Son güncelleme: 17 Haziran 2026</div>
+    </header>
+
+    <div class="card">
+      <p>EventApp ("uygulama"), kullanıcıların etkinlik düzenleyip listeden
+      seçtikleri kişilere davet gönderdiği bir mobil uygulamadır. Gizliliğine
+      önem veriyoruz. Bu politika, hangi verileri topladığımızı, nasıl
+      kullandığımızı ve haklarını açıklar.</p>
+
+      <h2>Topladığımız Veriler</h2>
+      <ul>
+        <li><strong>Hesap bilgileri:</strong> E-posta adresi ve şifre (kimlik
+          doğrulama için; şifre Firebase Authentication tarafından güvenli
+          şekilde saklanır, tarafımızca görülmez).</li>
+        <li><strong>Profil bilgileri:</strong> Kullanıcı adı, profil fotoğrafı
+          (opsiyonel) ve ilgilendiğin etkinlik türleri.</li>
+        <li><strong>Etkinlik verileri:</strong> Oluşturduğun etkinliklerin
+          başlığı, görseli, başlangıç/bitiş zamanı, konumu ve davet ettiğin
+          kişiler ile katılım (RSVP) yanıtları.</li>
+        <li><strong>Konum:</strong> Yalnızca bir etkinliğe konum eklemeyi
+          seçtiğinde, cihazının GPS konumu ilgili etkinliğe kaydedilir. Konumun
+          sürekli takip edilmez.</li>
+        <li><strong>Fotoğraflar:</strong> Profil veya etkinlik görseli olarak
+          seçtiğin fotoğraflar (küçük boyuta sıkıştırılarak saklanır).</li>
+        <li><strong>Bildirim kimliği:</strong> Push bildirimi gönderebilmek için
+          cihazının bildirim (FCM) jetonu.</li>
+      </ul>
+
+      <h2>Verileri Nasıl Kullanıyoruz</h2>
+      <ul>
+        <li>Hesabını oluşturmak ve oturum açmanı sağlamak.</li>
+        <li>Etkinlik daveti, katılım yönetimi ve bildirim gönderimi.</li>
+        <li>Etkinlik bitiş zamanında gelmeyen katılımcılara bildirim göndermek.</li>
+      </ul>
+      <p>Verilerini <strong>satmıyoruz</strong> ve reklam amacıyla üçüncü
+      taraflarla paylaşmıyoruz.</p>
+
+      <h2>Veri Saklama ve Altyapı</h2>
+      <p>Veriler Google <strong>Firebase</strong> hizmetlerinde (Authentication,
+      Cloud Firestore, Cloud Messaging) saklanır ve işlenir. Bu hizmetler
+      Google'ın gizlilik ve güvenlik standartlarına tabidir.</p>
+      <p>Süresi geçen etkinlikler ve ilgili tüm alt verileri (katılım yanıtları
+      dâhil) sistem tarafından otomatik olarak silinir.</p>
+
+      <h2>İzinler</h2>
+      <ul>
+        <li><strong>Bildirimler:</strong> Davet ve etkinlik bildirimleri için.</li>
+        <li><strong>Konum:</strong> Etkinliğe konum işaretlemek için (isteğe bağlı).</li>
+        <li><strong>Kamera / Fotoğraflar:</strong> Profil ve etkinlik görseli seçmek için.</li>
+      </ul>
+      <p>Bu izinler yalnızca ilgili özelliği kullandığında istenir ve reddedebilirsin.</p>
+
+      <h2>Hesabını ve Verilerini Silme</h2>
+      <p>Uygulama içinden <strong>Profili Düzenle &rarr; Hesabı Sil</strong>
+      yolunu izleyerek hesabını ve tüm verilerini (profil, oluşturduğun
+      etkinlikler, davetler ve bildirim jetonların) kalıcı olarak
+      silebilirsin. Bu işlem geri alınamaz.</p>
+
+      <h2>Çocukların Gizliliği</h2>
+      <p>Uygulama 13 yaş altı çocuklara yönelik değildir ve bilerek bu yaş
+      grubundan veri toplamaz.</p>
+
+      <h2>Değişiklikler</h2>
+      <p>Bu politikayı zaman zaman güncelleyebiliriz. Güncellemeler bu sayfada
+      yayımlanır; üstteki "Son güncelleme" tarihi değişir.</p>
+
+      <h2>İletişim</h2>
+      <p>Gizlilikle ilgili soruların için:
+      <a href="mailto:xantncr@gmail.com">xantncr@gmail.com</a></p>
+    </div>
+
+    <footer>© 2026 EventApp · Bu uygulama hobi amaçlı geliştirilmiştir.</footer>
+  </div>
+</body>
+</html>
