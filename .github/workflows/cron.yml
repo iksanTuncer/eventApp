@@ -1,0 +1,36 @@
+name: Event Cron Worker
+
+# Ücretsiz: GitHub Actions her 5 dakikada bir çalışır.
+# Davet bildirimlerini gönderir ve süresi geçen etkinlikleri siler.
+# Kredi kartı / Blaze planı gerekmez.
+
+on:
+  schedule:
+    # Her 5 dakikada bir (GitHub cron'un minimum aralığı ~5 dk).
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {} # Elle tetikleme için
+
+jobs:
+  run-worker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps
+        working-directory: scripts
+        run: npm install
+
+      - name: Run worker
+        working-directory: scripts
+        env:
+          # Firebase service account JSON'u GitHub Secrets'ta sakla:
+          # Repo > Settings > Secrets and variables > Actions > New secret
+          # Adı: FIREBASE_SERVICE_ACCOUNT  Değer: service-account.json içeriği (tek satır)
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node cron_worker.js

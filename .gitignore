@@ -1,0 +1,30 @@
+# Flutter
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+*.iml
+.idea/
+.vscode/
+
+# Firebase / hassas dosyalar — ASLA commit ETME
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+**/service-account.json
+*.p8
+*.keystore
+key.properties
+
+# Node (cron worker)
+scripts/node_modules/
+scripts/service-account.json
+
+# Local SSL truststore fix for Gradle (machine-specific, contains only public CAs)
+android/gradle-truststore.p12
+
+# macOS
+.DS_Store

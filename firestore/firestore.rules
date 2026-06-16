@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // --- Kullanıcılar ---
+    match /users/{uid} {
+      // Herhangi bir giriş yapmış kullanıcı diğer profilleri okuyabilir
+      // (davetli listesi seçmek için gerekli). Yazma sadece kendi.
+      allow read: if isSignedIn();
+      allow create: if isSelf(uid);
+      allow update, delete: if isSelf(uid);
+    }
+
+    // --- Etkinlikler ---
+    match /events/{eventId} {
+      // Okuma: host ya da davetli olan kullanıcı
+      allow read: if isSignedIn() && (
+        resource.data.hostUid == request.auth.uid ||
+        request.auth.uid in resource.data.inviteeUids
+      );
+
+      // Oluşturma: host kendisi olmalı
+      allow create: if isSignedIn()
+        && request.resource.data.hostUid == request.auth.uid;
+
+      // Güncelleme/Silme: sadece host
+      allow update, delete: if isSignedIn()
+        && resource.data.hostUid == request.auth.uid;
+
+      // --- RSVP yanıtları ---
+      match /rsvps/{uid} {
+        // Host ve davetli okuyabilir
+        allow read: if isSignedIn();
+        // Davetli kendi yanıtını yazabilir; host da oluşturabilir (başlangıç pending)
+        allow create: if isSignedIn();
+        allow update: if isSelf(uid) ||
+          get(/databases/$(database)/documents/events/$(eventId)).data.hostUid == request.auth.uid;
+        allow delete: if isSignedIn();
+      }
+    }
+  }
+}

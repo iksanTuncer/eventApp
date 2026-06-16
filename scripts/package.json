@@ -1,0 +1,12 @@
+{
+  "name": "event-app-cron-worker",
+  "version": "1.0.0",
+  "description": "Ücretsiz FCM bildirim + etkinlik temizleme worker (GitHub Actions)",
+  "main": "cron_worker.js",
+  "scripts": {
+    "start": "node cron_worker.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0"
+  }
+}
