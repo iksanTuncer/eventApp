@@ -58,7 +58,7 @@ class S {
   // RSVP
   static const willAttend = 'Katılacağım';
   static const wontAttend = 'Katılmayacağım';
-  static const yourResponse = 'Yanıtın';
+  static const yourResponse = 'Cevap';
 
   // Event detay
   static const attending = 'Katılacaklar';

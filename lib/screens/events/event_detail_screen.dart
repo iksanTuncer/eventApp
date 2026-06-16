@@ -61,7 +61,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     setState(() => _myStatus = status);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Yanıtın kaydedildi')),
+        const SnackBar(content: Text('Cevabın kaydedildi')),
       );
     }
   }
@@ -163,7 +163,12 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                   const SizedBox(height: 12),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: StaticMap(lat: e.lat!, lng: e.lng!, height: 170),
+                    child: StaticMap(
+                      lat: e.lat!,
+                      lng: e.lng!,
+                      height: 170,
+                      onTap: () => _openInMaps(e.lat!, e.lng!),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   OutlinedButton.icon(
