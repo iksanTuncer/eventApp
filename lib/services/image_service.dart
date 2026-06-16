@@ -13,17 +13,25 @@ class ImageService {
   /// Galeri veya kameradan fotoğraf seçip sıkıştırılmış base64 döndürür.
   /// Hedef: uzun kenar 800px, JPEG q70, ~250KB altı.
   Future<String?> pickAndEncode({bool fromCamera = false}) async {
-    final XFile? picked = await _picker.pickImage(
-      source: fromCamera ? ImageSource.camera : ImageSource.gallery,
-      maxWidth: AppConfig.imageMaxDimension.toDouble(),
-      maxHeight: AppConfig.imageMaxDimension.toDouble(),
-      imageQuality: AppConfig.imageQuality,
-    );
-    if (picked == null) return null;
+    try {
+      final XFile? picked = await _picker.pickImage(
+        source: fromCamera ? ImageSource.camera : ImageSource.gallery,
+        maxWidth: AppConfig.imageMaxDimension.toDouble(),
+        maxHeight: AppConfig.imageMaxDimension.toDouble(),
+        imageQuality: AppConfig.imageQuality,
+      );
+      if (picked == null) return null;
 
-    final bytes = await _compress(File(picked.path));
-    if (bytes == null) return null;
-    return base64Encode(bytes);
+      // image_picker zaten maxWidth/quality ile küçültür. Ek sıkıştırma denenir;
+      // bazı cihaz formatlarında (ör. HEIC) sıkıştırma null dönebilir — bu durumda
+      // picker'ın çıktısı doğrudan kullanılır (görselin "seçilememe" sorununu önler).
+      Uint8List? bytes = await _compress(File(picked.path));
+      bytes ??= await picked.readAsBytes();
+      return base64Encode(bytes);
+    } catch (_) {
+      // Kamera/galeri izni reddi veya beklenmedik hata: sessizce null dön.
+      return null;
+    }
   }
 
   Future<Uint8List?> _compress(File file) async {

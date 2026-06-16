@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/app_event.dart';
 import '../services/auth_provider.dart';
-import '../services/cleanup_service.dart';
 import '../services/event_service.dart';
 import '../services/notification_service.dart';
 import '../utils/strings.dart';
@@ -18,16 +17,16 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _events = EventService();
-  final _cleanup = CleanupService();
 
   @override
   void initState() {
     super.initState();
-    // Açılışta: bildirim init + süresi geçen etkinlik temizliği
+    // Açılışta sadece bildirim init. Süresi geçen etkinliklerin işlenmesi
+    // (no-show FCM + silme) tamamen cron worker'a bırakıldı; istemci silmesi
+    // FCM gönderemediği için no-show bildirimini engelliyordu.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final uid = context.read<AuthProvider>().firebaseUser!.uid;
       await NotificationService().init(uid);
-      await _cleanup.runForHost(uid);
     });
   }
 

@@ -45,5 +45,13 @@ service cloud.firestore {
         allow delete: if isSignedIn();
       }
     }
+
+    // --- Bildirim kuyruğu ---
+    // İstemci davet/no-show görevini buraya yazar; cron worker (Admin SDK,
+    // kuralları bypass eder) okur, FCM gönderir ve siler. İstemci sadece create.
+    match /notifications/{id} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if false;
+    }
   }
 }
