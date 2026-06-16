@@ -16,7 +16,11 @@
 const admin = require("firebase-admin");
 
 // Service account JSON, ortam değişkeninden (GitHub Secret) okunur.
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+// Olası BOM (U+FEFF) ve baştaki/sondaki boşluklar temizlenir (JSON.parse hatasını önler).
+const rawServiceAccount = (process.env.FIREBASE_SERVICE_ACCOUNT || "")
+  .replace(/^﻿/, "")
+  .trim();
+const serviceAccount = JSON.parse(rawServiceAccount);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
