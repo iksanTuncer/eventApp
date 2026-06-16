@@ -1,4 +1,5 @@
 name: Event Cron Worker
+# EventApp: süresi geçen etkinlikleri işler + davet/no-show FCM bildirimlerini gönderir.
 
 # Ücretsiz: GitHub Actions her 5 dakikada bir çalışır.
 # Davet bildirimlerini gönderir ve süresi geçen etkinlikleri siler.
