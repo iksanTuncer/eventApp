@@ -3,10 +3,19 @@
 > Bu rehber, uygulamayı Mac'te derleyip iPhone'da (push dahil) test etmen için
 > uçtan uca adımları içerir. **Android tarafı zaten çalışıyor**; burası yalnızca iOS.
 >
-> - **Bundle ID:** `com.eventapp.eventApp`
+> - **iOS Bundle ID:** `com.iksantuncer.eventApp` ← App Store'a yollanan GERÇEK uygulama
+> - **Android paketi:** `com.eventapp.event_app` (ayrı; karıştırma)
 > - **Firebase proje:** `eventapp-78a1f`
 > - **GitHub:** `https://github.com/iksanTuncer/eventApp` (public)
 > - **Uygulama adı:** EventApp
+
+> ⚠️ **DİKKAT — Firebase'de İKİ iOS uygulaması var:**
+> - `com.eventapp.eventApp` → ESKİ, App Store'da çakıştığı için **KULLANILMIYOR**
+> - `com.iksantuncer.eventApp` → **GERÇEK / yollanan uygulama** (tüm iOS işlemleri bunun altında)
+>
+> APNs anahtarı, GoogleService-Info.plist ve `flutterfire configure` **mutlaka
+> `com.iksantuncer.eventApp` altında** olmalı. (Eski iOS uygulamasını Firebase'den
+> kaldırmak karışıklığı önler.)
 
 ---
 
@@ -21,7 +30,7 @@ Bunlar repoda commit'li, tekrar yapman GEREKMİYOR:
   - Galeri (`NSPhotoLibraryUsageDescription`)
   - Arka plan push (`UIBackgroundModes → remote-notification`)
   - Uygulama adı `CFBundleDisplayName = EventApp`
-- [x] `ios/Runner.xcodeproj` → `PRODUCT_BUNDLE_IDENTIFIER = com.eventapp.eventApp` (Firebase ile eşleşiyor)
+- [x] `ios/Runner.xcodeproj` → `PRODUCT_BUNDLE_IDENTIFIER = com.iksantuncer.eventApp` (Firebase ile eşleşiyor)
 - [x] `ios/Runner/AppDelegate.swift` → standart Flutter (FCM otomatik çalışır, değişiklik gerekmez)
 - [x] Bildirim izni kod içinde isteniyor (`NotificationService.init`)
 - [x] Push backend (cron-job.org + GitHub Actions) çalışıyor — iOS'a da gönderir
@@ -129,11 +138,13 @@ Firebase'e yüklemen gerekir. (Android'de bu gerekmiyordu; iOS'a özel.)
 ### 3.2 Firebase'e yükle
 1. https://console.firebase.google.com → proje **eventapp-78a1f**
 2. ⚙️ **Project settings** → **Cloud Messaging** sekmesi
-3. **Apple app configuration** → iOS uygulaman (`com.eventapp.eventApp`) altında
-   **APNs Authentication Key** → **Upload**
-4. İndirdiğin **.p8** dosyasını seç, **Key ID** ve **Team ID**'yi gir → **Upload**
+3. **Apple app configuration** → ⚠️ **DOĞRU iOS uygulaması olan `com.iksantuncer.eventApp`**
+   altında **APNs Authentication Key** → **Upload**
+   (Yanlışlıkla `com.eventapp.eventApp` altına yüklersen iOS'a push GELMEZ.)
+4. İndirdiğin **.p8** dosyasını seç, **Key ID** ve **Team ID** (`L667464WH3`) gir → **Upload**
 
 > Bu adım yapılmadan iOS'a push **gelmez** (Android etkilenmez).
+> Not: APNs anahtarı tüm Apple Team için ortaktır; aynı `.p8` her bundle altında kullanılır.
 
 ---
 
@@ -150,7 +161,7 @@ Xcode açılınca:
 2. **Signing & Capabilities** sekmesi:
    - **Automatically manage signing** açık olsun
    - **Team:** kendi Apple Developer hesabını seç (xantncr@gmail.com)
-   - **Bundle Identifier:** `com.eventapp.eventApp` (zaten dolu)
+   - **Bundle Identifier:** `com.iksantuncer.eventApp` (zaten dolu)
    - Hata kalmamalı (yeşil ya da uyarısız)
 3. **+ Capability** (sol üst) → **Push Notifications** ekle
    - Bu, `Runner.entitlements` oluşturur ve App ID'de push'u etkinleştirir.
@@ -197,10 +208,40 @@ flutter run --release
 2. Başka bir hesaptan (veya Android cihazdan) bu iPhone kullanıcısını **etkinliğe davet et**.
 3. **~1 dakika içinde** iPhone'a push düşmeli (cron-job.org her dakika tetikliyor).
 
-Push gelmezse Bölüm 7'deki kontrol listesine bak.
+Push gelmezse aşağıdaki "BİLDİRİM SORUNU" bölümüne bak.
 
-> Worker'ın gönderip göndermediğini Windows'tan ben doğrulayabiliyorum:
-> loglarda `Invite sent for event ... -> N tokens` satırı çıkıyor.
+> Worker'ın gönderip göndermediğini Windows'tan doğrulayabiliyoruz: loglarda
+> `Invite sent for event XXX -> 1/1 token delivered (1 invitee, 1 with token)` çıkıyor.
+
+---
+
+## 🔔🔧 BİLDİRİM SORUNU — kesin teşhis ve çözüm
+
+**Mimari sağlam; sorun neredeyse her zaman "ölü/eksik FCM token"dır.**
+Her yeni kurulum (APK veya yeni TestFlight build) FCM token'ını **değiştirir**; eski token ölür.
+Token yalnızca uygulama **açılıp giriş yapıldığında** ve **bildirim izni verildiğinde**
+`users/{uid}/private/push` altına kaydedilir.
+
+### Altın kural (her test öncesi, HER iki cihazda)
+1. En son sürümü kur (Android: APK / iOS: TestFlight).
+2. Uygulamayı **AÇ**, giriş yap.
+3. Bildirim iznine **"İzin Ver"** de.
+4. Ana ekrana ulaş (token burada yazılır).
+
+Bu yapılmadan, davet gönderilse bile token ölü olduğu için bildirim **teslim edilmez**.
+
+### Worker logundan teşhis (Windows'tan okunur)
+| Log satırı | Anlamı |
+|------------|--------|
+| `-> 1/1 token delivered (1 invitee, 1 with token)` | ✅ Teslim edildi |
+| `-> 0/0 token delivered (1 invitee, 0 with token)` | ❌ Davetli uygulamayı hiç açmamış (token yok) |
+| `-> 0/1 token delivered` + `Pruned dead token` | ❌ Token ölü → davetli yeni sürümü açıp izin vermeli |
+
+### Platforma özel
+- **Android:** `POST_NOTIFICATIONS` izni reddedilirse push gelir ama **gösterilmez** → izin ver.
+  Ayrıca pil optimizasyonu uygulamayı kısıtlayabilir.
+- **iOS:** APNs `.p8` doğru iOS uygulaması (`com.iksantuncer.eventApp`) altında yüklü olmalı +
+  **gerçek cihaz** (simülatörde push yok) + bildirim izni verili olmalı.
 
 ---
 
@@ -208,7 +249,7 @@ Push gelmezse Bölüm 7'deki kontrol listesine bak.
 
 WhatsApp'tan APK dağıtır gibi iOS'ta doğrudan dosya paylaşılamaz; **TestFlight** kullanılır:
 
-1. https://appstoreconnect.apple.com → **Apps → +** → yeni uygulama, bundle `com.eventapp.eventApp`.
+1. https://appstoreconnect.apple.com → **Apps → +** → yeni uygulama, bundle `com.iksantuncer.eventApp`.
 2. Xcode → **Product → Archive** → **Distribute App → App Store Connect → Upload**.
 3. App Store Connect → **TestFlight** → test kullanıcısı (e-posta) ekle → onlar TestFlight uygulamasından kurar.
 
