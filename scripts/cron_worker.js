@@ -115,6 +115,13 @@ async function sendToTokenMap(tokenMap, title, body, data = {}) {
           const uid = tokenToUid.get(tok);
           if (!deadByUid.has(uid)) deadByUid.set(uid, new Set());
           deadByUid.get(uid).add(tok);
+        } else if (r.error) {
+          // Ölü olmayan başarısızlık (ör. APNs/kimlik hatası): kodu logla ki
+          // teşhis edebilelim. Token silinmez (geçici/yapılandırma hatası olabilir).
+          const uid = tokenToUid.get(chunk[j]);
+          console.error(
+            `FCM teslim hatası uid=${uid} code=${r.error.code} msg=${r.error.message}`
+          );
         }
       });
     } catch (e) {
