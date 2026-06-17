@@ -2,55 +2,64 @@
 
 > Eve gidince Mac mini'de yeni bir Claude Code sohbeti aç ve **aşağıdaki bloğu**
 > ilk mesaj olarak yapıştır. Hem seni hem Claude'u tam kaldığımız yere getirir.
-> Detaylı adımlar: **IOS_BUILD_GUIDE.md**
+> Detaylı iOS adımları: **IOS_BUILD_GUIDE.md**
+
+> ⚠️ **USB ile klasörü götürürken DİKKAT:**
+> `lib/firebase_options.dart` ve `ios/Runner/GoogleService-Info.plist` gitignore'da.
+> **Windows'taki kopyaları ESKİ `com.eventapp.eventApp` uygulamasına ait** — bunlarla
+> Mac'teki DOĞRU (`com.iksantuncer.eventApp`) dosyaların ÜZERİNE YAZMA!
+> En temizi: Mac'te USB kopyası yerine **`git pull`** yap (bugünkü değişiklikler GitHub'da).
+> Eğer USB ile kopyalarsan, kopyalamadan önce Mac'teki bu iki dosyayı yedekle ve geri koy.
 
 ---
 
 ```
-Merhaba, EventApp projesine Mac mini'den iOS derlemesi için devam ediyoruz.
+Merhaba, EventApp projesine devam ediyoruz. Windows'ta Android, Mac'te iOS tarafını yürütüyorum.
 
-DURUM / NEREDE KALDIK:
-- Flutter + Firebase (ücretsiz Spark, kartsız) etkinlik davet uygulaması. Android APK çalışıyor.
-- Push backend hazır: client → Firestore 'notifications' → cron worker (Firebase Admin) → FCM.
-  cron-job.org her dakika worker'ı tetikliyor (kuruldu, doğrulandı). Süre/silme TAMAMEN cron'a ait.
-- Son oturumda eklendi (hepsi commit'li): kapsamlı güvenlik sertleştirmesi (Firestore kuralları
-  sıkılaştırıldı ve CANLIYA DEPLOY EDİLDİ), cron idempotency (çift bildirim yok) + ölü token temizliği,
-  profil düzenleme (ad+foto), etkinlik foto seçici düzeltmesi (galeri+kamera), RSVP listelerinde foto+isim,
-  istemci sızıntı/mounted düzeltmeleri. fcmTokens artık users/{uid}/private/push altında (gizlilik).
-- iOS kod tarafı HAZIR: Info.plist izinleri+push var, AppDelegate standart. iOS bundle id = com.iksantuncer.eventApp
-  (App Store'a yollanan GERÇEK uygulama; eski com.eventapp.eventApp KULLANILMIYOR). Android paketi = com.eventapp.event_app.
-  NOT: firebase_options.dart ve GoogleService-Info.plist gitignore'da → clone'la GELMEZ; flutterfire üretir.
-- BİLDİRİM SORUNU TEŞHİSİ: mimari sağlam; sorun ölü/eksik FCM token. Her yeni kurulumdan sonra cihazda
-  uygulama AÇILIP bildirim izni verilmeli (token o an private/push'a yazılır). Worker logu artık
-  "X/Y token delivered" yazıyor → teslim doğrulanabilir.
+DURUM (2026-06-17 itibarıyla):
+- Flutter + Firebase (ücretsiz Spark, kartsız). Android APK çalışıyor. iOS TestFlight'ta "Waiting for Review".
+- ✅ PUSH ARTIK TAM ÇALIŞIYOR: Android↔Android, Android↔iPhone her yön teslim ediliyor (canlı doğrulandı).
+- Push akışı: client → Firestore 'notifications' → cron worker (Firebase Admin) → FCM.
+  cron-job.org her dakika worker'ı tetikliyor. Süre/silme + bildirim TAMAMEN cron'a ait.
+- Worker artık "X/Y token delivered" logluyor (teslim doğrulanabilir). Hata kodları da loglanıyor.
 
-ŞİMDİ YAPACAĞIMIZ: Mac'te iOS derlemesi + iPhone'da push testi.
-Adım adım rehber repoda: IOS_BUILD_GUIDE.md (lütfen onu referans al).
+BUGÜN ÇÖZÜLEN ANA SORUN (iOS push gelmiyordu):
+- Hata: messaging/third-party-auth-error → iOS APNs kimliği eksik.
+- KÖK SEBEP: Firebase'de APNs Authentication Key sadece DEVELOPMENT slotundaydı; PRODUCTION boştu.
+  TestFlight = production APNs kullanır → production kimliği bulunamayınca teslim başarısızdı.
+- ÇÖZÜM: Aynı .p8'i Firebase'de production slotuna da yükledik (com.iksantuncer.eventApp altında).
+  Key ID: Q4UX3R2QU3, Team ID: L667464WH3. Sonuç: 1/1 delivered, iPhone'a bildirim düştü. ✅
+- DERS: .p8 APNs Auth Key ortam-bağımsızdır ama Firebase'de hem development hem production slotu dolu olmalı.
 
-ELİMDE HAZIR OLANLAR: Mac mini, Xcode, aktif Apple Developer hesabı.
-
-KRİTİK NOKTALAR (rehberde):
-1) firebase_options.dart + ios/Runner/GoogleService-Info.plist gitignore'da → clone'la gelmez.
-   İkisini de "flutterfire configure --project eventapp-78a1f" yeniden üretir (Bölüm 2.2).
-2) iOS push için APNs .p8 anahtarı DOĞRU iOS uygulaması (com.iksantuncer.eventApp) altında Firebase
-   Cloud Messaging'e yüklenmeli. Eski com.eventapp.eventApp altına yüklenirse iOS push gelmez.
-3) Firestore kuralları zaten deploy edildi → Mac'te yeniden deploy GEREKMEZ (kural değiştirmedikçe).
+BİLDİRİM TEST KURALI: Her yeni kurulumdan (APK/TestFlight) sonra cihazda uygulamayı AÇ + bildirim izni ver,
+yoksa FCM token ölür ve teslim olmaz. Worker logu "0/0" veya "0/1 + Pruned" derse sebep budur.
 
 SABİTLER:
 - Firebase proje: eventapp-78a1f
-- iOS Bundle ID: com.iksantuncer.eventApp  |  Android paketi: com.eventapp.event_app
-- Apple Team ID: L667464WH3
-- GitHub: https://github.com/iksanTuncer/eventApp (public)
-- E-posta: xantncr@gmail.com
+- iOS Bundle ID: com.iksantuncer.eventApp  (App Store'a yollanan GERÇEK uygulama)
+- Android paketi: com.eventapp.event_app
+- Apple Team ID: L667464WH3   |  APNs Key ID: Q4UX3R2QU3
+- GitHub: https://github.com/iksanTuncer/eventApp (public)  |  E-posta: xantncr@gmail.com
 - Kural: APK'yı sadece ben "derle" deyince derle.
 
-Hadi Mac'te BÖLÜM 1'den (ortam kurulumu) başlayalım. İlk olarak ne yapmalıyım?
+NOTLAR:
+- firebase_options.dart + ios/Runner/GoogleService-Info.plist gitignore'da. Mac'tekiler com.iksantuncer.eventApp'a
+  aittir; Windows'takiler ESKİ com.eventapp.eventApp'a aittir → karıştırma. Mac'te git pull yeterli.
+- Firestore kuralları deploy edildi → kural değiştirmedikçe yeniden deploy gerekmez.
+- Firebase'de eski/kullanılmayan com.eventapp.eventApp iOS uygulaması var; istersen kaldırabiliriz.
+
+Önce şunu söyle: Mac'te git pull yaptın mı ve flutter doctor temiz mi? Sonra ne üzerinde çalışmak istediğimi soracağım.
 ```
 
 ---
 
-## Notlar
-- Mac'teki Claude Code, bu Windows oturumunun hafızasını otomatik taşımaz.
-  Bu yüzden yukarıdaki mesaj + repodaki `IOS_BUILD_GUIDE.md` birlikte "hafıza" görevi görür.
-- Mac'te `git clone https://github.com/iksanTuncer/eventApp.git` yapınca bu dosya ve rehber gelir.
-- Tek istisna: `GoogleService-Info.plist` (gitignore'da) + APNs `.p8` anahtarı → rehberde Bölüm 2.2 ve 3.
+## Eve gidince ilk adımlar (Mac)
+1. `cd ~/Desktop/eventApp` (mevcut Mac kopyan) → **`git pull`** (bugünkü worker log değişiklikleri gelsin).
+2. Yukarıdaki bloğu yeni Claude sohbetine yapıştır.
+3. iOS ile devam edeceksen **IOS_BUILD_GUIDE.md** referans.
+
+## Bugünün özeti (bu Windows oturumunda yapılanlar — hepsi GitHub'da)
+- Mac'ten gelen 8 commit çekildi, Android APK son haline göre yeniden derlendi.
+- Worker'a teslim sayısı + hata kodu loglama eklendi (push teşhisi için).
+- iOS bundle her yerde `com.iksantuncer.eventApp` olarak düzeltildi (dokümanlar).
+- **iOS push sorunu çözüldü:** production APNs anahtarı eksikti → yüklendi → çalışıyor.
