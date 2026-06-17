@@ -93,10 +93,11 @@ async function sendToTokenMap(tokenMap, title, body, data = {}) {
       }
     }
   }
-  if (allTokens.length === 0) return { attempted: 0, allSucceeded: true };
+  if (allTokens.length === 0) return { attempted: 0, succeeded: 0, allSucceeded: true };
 
   const deadByUid = new Map(); // uid -> Set(token)
   let allSucceeded = true;
+  let succeeded = 0;
 
   for (let i = 0; i < allTokens.length; i += 500) {
     const chunk = allTokens.slice(i, i + 500);
@@ -107,7 +108,9 @@ async function sendToTokenMap(tokenMap, title, body, data = {}) {
         data,
       });
       res.responses.forEach((r, j) => {
-        if (!r.success && r.error && DEAD_TOKEN_CODES.has(r.error.code)) {
+        if (r.success) {
+          succeeded++;
+        } else if (r.error && DEAD_TOKEN_CODES.has(r.error.code)) {
           const tok = chunk[j];
           const uid = tokenToUid.get(tok);
           if (!deadByUid.has(uid)) deadByUid.set(uid, new Set());
@@ -133,7 +136,7 @@ async function sendToTokenMap(tokenMap, title, body, data = {}) {
     }
   }
 
-  return { attempted: allTokens.length, allSucceeded };
+  return { attempted: allTokens.length, succeeded, allSucceeded };
 }
 
 /** Bir işlem listesini ≤500'lük batch'ler hâlinde commit eder. */
@@ -158,15 +161,20 @@ async function processInvites() {
     const n = doc.data();
     try {
       const tokenMap = await getTokenMapForUids(n.targetUids || []);
-      const { allSucceeded } = await sendToTokenMap(tokenMap, n.title, n.body, {
-        kind: n.kind || "invite",
-        eventId: n.eventId || "",
-      });
+      const { attempted, succeeded, allSucceeded } = await sendToTokenMap(
+        tokenMap,
+        n.title,
+        n.body,
+        { kind: n.kind || "invite", eventId: n.eventId || "" }
+      );
       // Yalnızca gönderim tam başarılıysa kuyruğu temizle; aksi halde bir
       // sonraki turda tekrar denenir (chunk bazlı en-az-bir-kez teslim).
       if (allSucceeded) {
         await doc.ref.delete();
-        console.log(`Invite sent for event ${n.eventId}`);
+        console.log(
+          `Invite sent for event ${n.eventId} -> ${succeeded}/${attempted} token delivered ` +
+            `(${(n.targetUids || []).length} invitee, ${tokenMap.size} with token)`
+        );
       } else {
         console.warn(`Invite kısmen başarısız (${n.eventId}), tekrar denenecek`);
       }
@@ -227,11 +235,16 @@ async function processExpiredEvents() {
           // 2) SADECE METİN push gönder + ölü token temizle (en fazla bir kez).
           const tokenMap = await getTokenMapForUids(noShowUids);
           const body = e.noShowMessage || `"${e.title}" etkinliğini kaçırdın.`;
-          await sendToTokenMap(tokenMap, "Bir etkinliği kaçırdın", body, {
-            kind: "no_show",
-            eventTitle: e.title || "",
-          });
-          console.log(`No-show processed for ${eventId} -> ${noShowUids.length} users`);
+          const { attempted, succeeded } = await sendToTokenMap(
+            tokenMap,
+            "Bir etkinliği kaçırdın",
+            body,
+            { kind: "no_show", eventTitle: e.title || "" }
+          );
+          console.log(
+            `No-show processed for ${eventId} -> ${noShowUids.length} users, ` +
+              `${succeeded}/${attempted} token delivered (${tokenMap.size} with token)`
+          );
         } else {
           // Gelmeyen yok: tutarlılık için bayrağı yine de koy.
           await doc.ref.update({ noShowProcessed: true });
