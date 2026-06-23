@@ -136,6 +136,18 @@ class _EventList extends StatelessWidget {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
+        // Sorgu hatası (ör. eksik Firestore composite index) artık sessizce
+        // boş liste gibi gösterilmez; gerçek sebep yüzeye çıkar.
+        if (snap.hasError) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Text(S.loadFailed,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.black54)),
+            ),
+          );
+        }
         final events = snap.data ?? [];
         if (events.isEmpty) {
           return Center(

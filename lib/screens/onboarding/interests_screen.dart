@@ -31,6 +31,11 @@ class _InterestsScreenState extends State<InterestsScreen> {
         interests: _selected.toList(),
       );
       await auth.reloadProfile();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text(S.saveFailed)));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

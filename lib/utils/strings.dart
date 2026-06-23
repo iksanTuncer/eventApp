@@ -9,6 +9,8 @@ class S {
   static const back = 'Geri';
   static const loading = 'Yükleniyor...';
   static const errorGeneric = 'Bir hata oluştu. Tekrar dene.';
+  static const saveFailed = 'Kaydedilemedi. İnternet bağlantını kontrol et.';
+  static const loadFailed = 'Veriler yüklenemedi. Tekrar dene.';
 
   // Auth
   static const login = 'Giriş Yap';

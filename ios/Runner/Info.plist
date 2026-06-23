@@ -27,6 +27,13 @@
 	<!-- Permission usage descriptions (required by App Store review) -->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Etkinlik konumunu işaretlemek için konumunuza erişiyoruz.</string>
+	<!-- The geolocator plugin references the Always-authorization API, so Apple
+	     (warning 90683) requires these keys even though we only use location
+	     while the app is in use. -->
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Etkinlik konumunu işaretlemek için konumunuza erişiyoruz.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Etkinlik konumunu işaretlemek için konumunuza erişiyoruz.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Profil ve etkinlik fotoğrafı çekmek için kamera erişimi.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

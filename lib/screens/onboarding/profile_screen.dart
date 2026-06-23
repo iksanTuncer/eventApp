@@ -56,7 +56,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         username: name,
         photoBase64: _photoBase64,
       );
+      // reloadProfile sonrası _Root, username dolu olduğu için ilgi seçim
+      // ekranına yönlendirir. Hata olursa kullanıcı sessiz kalmasın.
       await auth.reloadProfile();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text(S.saveFailed)));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

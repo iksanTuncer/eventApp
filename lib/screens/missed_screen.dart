@@ -43,6 +43,16 @@ class _MissedScreenState extends State<MissedScreen> {
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+          if (snap.hasError) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(S.loadFailed,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.black54)),
+              ),
+            );
+          }
           final items = snap.data ?? [];
           if (items.isEmpty) {
             return const Center(

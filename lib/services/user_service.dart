@@ -27,7 +27,10 @@ class UserService {
     if (photoBase64 != null) data['photoBase64'] = photoBase64;
     if (interests != null) data['interests'] = interests;
     if (data.isEmpty) return;
-    await _col.doc(uid).update(data);
+    // set(merge) kullan: update() döküman yoksa hata fırlatır. Kayıt anında
+    // createUser tamamlanmamış olabileceğinden (onboarding "Devam" tuşunun
+    // sessizce ölmesine yol açıyordu) merge ile yazmak idempotent ve güvenli.
+    await _col.doc(uid).set(data, SetOptions(merge: true));
   }
 
   /// FCM token'ları herkese açık profil dokümanında DEĞİL, sadece sahibinin
