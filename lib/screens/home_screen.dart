@@ -53,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final auth = context.watch<AuthProvider>();
 
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: Text(auth.profile?.username ?? S.appName),
@@ -67,24 +67,24 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.history),
-              tooltip: S.missedTitle,
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const MissedScreen()),
-              ),
-            ),
-            IconButton(
               icon: const Icon(Icons.logout),
               onPressed: () => auth.signOut(),
             ),
           ],
           bottom: const TabBar(
+            isScrollable: false,
             indicatorColor: Colors.white,
+            indicatorWeight: 3,
             labelColor: Colors.white,
+            // Seçili olmayan sekme kahverengi zeminde okunabilir olsun.
+            unselectedLabelColor: Color(0xCCFFFFFF), // beyaz %80
+            labelStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            unselectedLabelStyle:
+                TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
             tabs: [
               Tab(text: S.myInvites),
               Tab(text: S.myEvents),
+              Tab(text: S.missedTitle),
             ],
           ),
         ),
@@ -100,6 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
               emptyText: S.noEvents,
               isHost: true,
             ),
+            const MissedTab(),
           ],
         ),
         floatingActionButton: FloatingActionButton.extended(

@@ -11,14 +11,31 @@ import '../utils/strings.dart';
 /// (no/pending) etkinliklerin görseli + no-show mesajı.
 /// Cron worker, etkinliği silmeden önce bu kayıtları users/{uid}/missed
 /// altına yazar (push ~4KB sınırına görsel sığmadığı için uygulama içinde gösterilir).
-class MissedScreen extends StatefulWidget {
+///
+/// Ana ekranda üçüncü sekme olarak [MissedTab] kullanılır; bu ekran (Scaffold'lu)
+/// gerekirse ayrı sayfa olarak da açılabilir.
+class MissedScreen extends StatelessWidget {
   const MissedScreen({super.key});
 
   @override
-  State<MissedScreen> createState() => _MissedScreenState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text(S.missedTitle)),
+      body: const MissedTab(),
+    );
+  }
 }
 
-class _MissedScreenState extends State<MissedScreen> {
+/// Yalnızca "Kaçırdıklarım" listesini gösteren gövde (Scaffold'suz) — TabBarView
+/// içinde kullanılır.
+class MissedTab extends StatefulWidget {
+  const MissedTab({super.key});
+
+  @override
+  State<MissedTab> createState() => _MissedTabState();
+}
+
+class _MissedTabState extends State<MissedTab> {
   final _events = EventService();
 
   // Stream bir kez oluşturulur; build'de yeniden üretilmez (gereksiz Firestore
@@ -35,41 +52,37 @@ class _MissedScreenState extends State<MissedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text(S.missedTitle)),
-      body: StreamBuilder<List<MissedEvent>>(
-        stream: _missed,
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snap.hasError) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(S.loadFailed,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.black54)),
-              ),
-            );
-          }
-          final items = snap.data ?? [];
-          if (items.isEmpty) {
-            return const Center(
-              child: Text(S.noMissed,
+    return StreamBuilder<List<MissedEvent>>(
+      stream: _missed,
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snap.hasError) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Text(S.loadFailed,
+                  textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.black54)),
-            );
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: items.length,
-            itemBuilder: (_, i) => _MissedCard(
-              missed: items[i],
-              onDismiss: () => _events.dismissMissed(_uid, items[i].eventId),
             ),
           );
-        },
-      ),
+        }
+        final items = snap.data ?? [];
+        if (items.isEmpty) {
+          return const Center(
+            child: Text(S.noMissed, style: TextStyle(color: Colors.black54)),
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(12),
+          itemCount: items.length,
+          itemBuilder: (_, i) => _MissedCard(
+            missed: items[i],
+            onDismiss: () => _events.dismissMissed(_uid, items[i].eventId),
+          ),
+        );
+      },
     );
   }
 }

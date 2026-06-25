@@ -77,6 +77,8 @@ class S {
   static const noShowImage = 'Gelmeyenlere görsel (opsiyonel)';
   static const sendInvites = 'Davetleri Gönder';
   static const endMustBeAfterStart = 'Bitiş, başlangıçtan sonra olmalı';
+  static const endMustBeFuture = 'Bitiş zamanı gelecekte olmalı';
+  static const pickStartFirst = 'Önce başlangıç tarihini seç';
 
   // RSVP
   static const willAttend = 'Katılacağım';

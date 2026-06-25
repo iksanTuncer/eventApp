@@ -81,26 +81,57 @@ class _EventFormScreenState extends State<EventFormScreen> {
 
   Future<void> _pickDateTime(bool isStart) async {
     final now = DateTime.now();
+
+    // Bitiş seçmek için önce başlangıç gerekli.
+    if (!isStart && _startAt == null) {
+      _err(S.pickStartFirst);
+      return;
+    }
+
+    // Bitişin alt sınırı: başlangıç ile "şimdi"nin büyüğü → hem başlangıçtan
+    // önce hem de geçmişte tarih seçilmesini engeller (etkinliğin "Etkinliklerim"de
+    // görünmesi için endAt > now ZORUNLU; aksi halde cron etkinliği siler).
+    final DateTime firstAllowed =
+        isStart ? now : (_startAt!.isAfter(now) ? _startAt! : now);
+    final DateTime initial = isStart
+        ? (_startAt ?? now)
+        : (_endAt != null && _endAt!.isAfter(firstAllowed)
+            ? _endAt!
+            : firstAllowed);
+
     final date = await showDatePicker(
       context: context,
-      initialDate: now,
-      firstDate: now,
+      initialDate: initial,
+      firstDate: firstAllowed,
       lastDate: now.add(const Duration(days: 365)),
     );
     if (date == null || !mounted) return;
     final time = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
+      initialTime: TimeOfDay.fromDateTime(initial),
     );
     if (time == null) return;
-    final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
-    setState(() {
-      if (isStart) {
+    final dt =
+        DateTime(date.year, date.month, date.day, time.hour, time.minute);
+
+    if (isStart) {
+      setState(() {
         _startAt = dt;
-      } else {
-        _endAt = dt;
+        // Başlangıç ileri kayıp mevcut bitişi geçersiz kıldıysa bitişi sıfırla.
+        if (_endAt != null && !_endAt!.isAfter(_startAt!)) _endAt = null;
+      });
+    } else {
+      // Saat dahil: bitiş hem başlangıçtan hem de "şimdi"den sonra olmalı.
+      if (!dt.isAfter(_startAt!)) {
+        _err(S.endMustBeAfterStart);
+        return;
       }
-    });
+      if (!dt.isAfter(now)) {
+        _err(S.endMustBeFuture);
+        return;
+      }
+      setState(() => _endAt = dt);
+    }
   }
 
   Future<void> _pickOnMap() async {
@@ -141,6 +172,11 @@ class _EventFormScreenState extends State<EventFormScreen> {
     }
     if (!_endAt!.isAfter(_startAt!)) {
       _err(S.endMustBeAfterStart);
+      return false;
+    }
+    // endAt geçmişte olursa etkinlik listede görünmez + cron siler. Engelle.
+    if (!_endAt!.isAfter(DateTime.now())) {
+      _err(S.endMustBeFuture);
       return false;
     }
     if (_locationMode == 'text' && _locationText.text.trim().isEmpty) {
